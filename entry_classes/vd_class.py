@@ -6,7 +6,7 @@ Created on Tue Jan 12 16:54:08 2016
 """
 
 from tools.sr_lat2cyr2lat import *
-from collections import OrderedDict 
+from collections import OrderedDict, Counter
 from entry_classes.vd_abbreviations import *
 import re
 
@@ -18,6 +18,8 @@ class Entry():
         self.title = name
         self.standard_title = None
         self.origin = None
+        self.script = 'cyr'
+        self.original_title = None
         self.gender = None
         self.children = []
         self.other = []
@@ -177,6 +179,8 @@ class Entry():
         for s in self.title:
             if s.lower() in AZBUKA_STR:
                 temp += s
+            elif s in ' {}1234567890d':
+                temp += s
         if temp != self.title:
             self.standard_title = temp
     def get_title(self):
@@ -193,11 +197,36 @@ class Entry():
         return self.forms 
     def get_type(self):
         return self.type
+    def get_wiki_type(self, key):
+        for typ in self.types[k]:
+            if typ in ['м','ж','с', 'гл им', 'м/ж', 'мн', 'зб', 'јд']:
+                return 'Именица'
+            if typ in ['учест', 'повр', 'несвр', '(не)свр', 'свр', 'прел']:
+                return 'Глагол'
+            if typ in ['рад', 'поим прид', 'присв прид', 'прид']:
+                return 'Придев'
+            if typ in ['прил',  'прил сад']:
+                return 'Прилог'
+            if typ in ['предл']:
+                return 'Предлог'
+            if typ in ['зам']:
+                return 'Заменица'
+            if typ in ['узвик']:
+                return 'Узвик'
+            if typ in ['бр']:
+                return 'број'
+            if typ in ['везн']:
+                return 'Везник'
+            if typ in ['реч.']:
+                return 'речца' 
+                
     def deaccentized_title_entry(self):
         '''
         This method sets title to deaccented title and standard_title to None.
         It maintains information on original title by storing it in origin.
         '''
+        if self.standard_title == None:
+            self.set_standard_title()
         self.origin = self.title
         self.title, self.standard_title = self.standard_title, None
     def copy_self(self):
@@ -275,35 +304,48 @@ class Entry():
                 body[part] = OrderedDict()
                 if key in self.sub_entries:
                     body[part]['sub_entries'] = OrderedDict()
-                    for j, sub_entry in enumerate(self.sub_entries[key]):
-                        body[part]['sub_entries'].update({j:self.sub_entries[key][sub_entry]})
+                    for sub_entry in self.sub_entries[key]:
+                        body[part]['sub_entries'].update({sub_entry:self.sub_entries[key][sub_entry]})
                 if key in self.type:
                     body[part]['type'] = OrderedDict()
-                    for j, typ in enumerate(self.type[key]):
-                        body[part]['type'].update({j:self.type[key][typ]})
+                    for typ in self.type[key]:
+                        body[part]['type'].update({typ:self.type[key][typ]})
                 if key in self.forms:
                     body[part]['forms'] = OrderedDict()
-                    for j, form in enumerate(self.forms[key]):
-                        body[part]['forms'].update({j:self.forms[key][form]})  
+                    for form in self.forms[key]:
+                        body[part]['forms'].update({form:self.forms[key][form]})  
                 if key in self.meanings:
                     body[part]['meanings'] = OrderedDict()
-                    for j, meaning in enumerate(self.meanings[key]):
-                        body[part]['meanings'].update({j:self.meanings[key][meaning]}) 
+                    for meaning in self.meanings[key]:
+                        body[part]['meanings'].update({meaning:self.meanings[key][meaning]}) 
                 if key in self.examples:
                     body[part]['examples'] = OrderedDict()
-                    for j, example in enumerate(self.examples[key]):
-                        body[part]['examples'].update({j:self.examples[key][example]}) 
+                    for example in self.examples[key]:
+                        body[part]['examples'].update({example:self.examples[key][example]}) 
                 if key in self.synonyms:
                     body[part]['synonyms'] = OrderedDict()
-                    for j, synonym in enumerate(self.synonyms[key]):
-                        body[part]['synonyms'].update({j:self.synonyms[key][synonym]}) 
+                    for synonym in self.synonyms[key]:
+                        body[part]['synonyms'].update({synonym:self.synonyms[key][synonym]}) 
                 if key in self.phrases:
                     body[part]['phrases'] = OrderedDict()
-                    for j, phrase in enumerate(self.phrases[key]):
-                        body[part]['phrases'].update({j:self.phrases[key][phrase]}) 
+                    for phrase in self.phrases[key]:
+                        body[part]['phrases'].update({phrase:self.phrases[key][phrase]}) 
         
         json.update({'elements':body})
         return json
+    def to_wiki(self, begin = False, end = False):
+        string = []
+        if begin:
+            if self.script == 'lat':
+                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (self.title, self.original_title))
+            else:
+                string.append('== %s ([[Викиречник:Српски|српски]]) ==\n\n' % (self.title))
+                
+        for k in self.keys:
+            string.append('=== %s ===\n' % (self.get_wiki_type()))
+            string.append(format_type(self.get_type(), self.get_wiki_type()))
+        
+        
 
 def strip_all(entity, chars = None):
     '''
@@ -444,7 +486,7 @@ def analyze_phrase(string, entry):
     '''
     string = string[1:].strip()
     lst_str = re.split(';\s.*(?=(?:;|\.))', string)
-
+    lst_str = [x for x in lst_str if x not in '.;']
     if len(lst_str) > 1:
         repeat_phrase = None
         for lst in lst_str:
@@ -467,19 +509,18 @@ def get_meaning(string, entry, title_of):
     '''
     meaning = location = reference = None
     meaning = re.findall('‘.*?[\'|’][\s|\.|;]{0,1}', string)
+    
     if len(meaning) != 0:
         meaning = meaning[0]
+        if meaning.endswith(';'):
+            meaning = meaning[:-1]
         string = string.replace(meaning, ' ')
         string = string.lstrip()
-        
-        if meaning.endswith(';'):
-            entry.increase_sub_entry_count()
 
         if meaning.endswith('.') == False:
-            string, location, reference = get_location_and_reference(string)
-        
+            _, location, reference = get_location_and_reference(meaning)
         if meaning:
-            meaning = meaning.strip('.;‘\'’ ')
+            meaning = meaning.strip('.‘\'’ ')
             entry.add_meaning(meaning, reference, location)
 
     return string, entry
@@ -511,11 +552,11 @@ def get_examples(string, entry, title_of):
     if len(examples) > 0:
         string = string.replace(examples[0], '')
         examples = split_example(examples[0])
-        remove = False
+        increase_sk = False
         for example in examples:
             example = example.strip()
             if example.endswith(';'):
-                remove = True
+                increase_sk = True
             reference = location = None
             if example != '':
                 string = string.replace(example, '')
@@ -524,10 +565,11 @@ def get_examples(string, entry, title_of):
             if example:
                 example = example.strip('—;. ' )
                 entry.add_examples(example, reference, location)
-    
-            if remove:
+                
+            if increase_sk:
                 entry.increase_sub_entry_count()
-                string = string.replace(';', '', 1)
+                increase_sk = False
+
     return string, entry
     
 def get_location_and_reference(s, string = None):
@@ -569,11 +611,40 @@ def cut_phrase(string, entry):
             phrases.append(string[idx[i]:idx[i+1]])
         else:
             phrases.append(string[idx[i]:])
-
+        
     for phrase in phrases:
         string = string.replace(phrase, '')
         _, entry = analyze_phrase(phrase, entry)
 
+    return string, entry
+    
+def get_forms(string, entry,title_of):
+    substr = re.findall('\D+\s\d\.[\s\w\.]{,3}', string)
+    if substr != []:
+        substr = substr[0]
+        if '‘' in substr:
+            substr = substr.split('‘')[0]
+        if substr in '. ' or (len(substr) == 2 and re.match('\d\.', substr)):
+            return string, entry
+        string = string.replace(substr, '')
+        substr = substr.strip()
+        substr = substr.split()
+        skip = False
+        for i, s in enumerate(substr):
+            if skip == True:
+                skip = False
+                continue
+            if s in ABBREVIATIONS:
+                entry.add_type(s)
+            else:
+                if i != len(substr)-1:
+                    if re.match('(\d\.|\s\w\.|\s\d\.[\s]{0,1}|[\w\.])', substr[i+1]):
+                        entry.add_forms(s + ' ' + substr[i+1])
+                        skip = True
+                    else:
+                        entry.add_forms(s)
+                else:
+                    entry.add_forms(s)
     return string, entry
     
 def append_to_form(entry, next_str):
@@ -624,6 +695,7 @@ def string_by_string(string, entry, title_of, synonym):
     '''
     if re.findall('[△|□|▭].*?[;|\.]', string) != []:
         string, entry = cut_phrase(string, entry)
+        
             
     '''
     If we encounter reference and location data at the beginning of the string
@@ -650,7 +722,9 @@ def string_by_string(string, entry, title_of, synonym):
     '''
     Find meaning and examples.
     '''
-    string, entry = get_meaning(string, entry, title_of)  
+    
+    string, entry = get_forms(string, entry, title_of)
+    string, entry = get_meaning(string, entry, title_of) 
     string, entry = get_examples(string, entry, title_of)
     
     '''
@@ -682,7 +756,7 @@ def string_by_string(string, entry, title_of, synonym):
         '''
         Look for abbreaviations, subentry delimiters, part of forms or 
         unescesarry characters.
-        '''
+        '''        
         if next_str in ABBREVIATIONS:
             entry.add_type(next_str)
         elif next_str == ';':
@@ -692,10 +766,17 @@ def string_by_string(string, entry, title_of, synonym):
             append_to_form(entry, next_str)
         elif next_str.startswith('(') or next_str.startswith('[') or next_str.endswith(')') or next_str.endswith(']'):
             append_to_form(entry, next_str)
-        elif next_str in ',.—˜ ':
+        elif next_str in ',.—˜- ':
             continue
         else:
             entry.add_forms(next_str)
+            
+        '''
+        If there is nothing left to chop, check if remaining string ends with
+        ; and increase sub_entry count.
+        '''
+        if string == next_str and next_str.endswith(';'):
+            entry.increase_sub_entry_count()
                     
     return entry, title_of
     
@@ -869,25 +950,35 @@ def make_entries(contents):
     are always in bold text). We concatenate adjecent string of the same
     font style.
     """
+    titles = []
     entries = OrderedDict()
     for p in contents:
         spans = p.findAll('span')
         para = []
-        to_add = False
+        to_add = None
         for s in spans:
             if 'bold' in s['style']:
-                para.append((s.get_text(), 0))
-                to_add = False
+                if to_add == 'bold':
+                    para[-1] = (' '.join([para[-1][0].strip(' \t\n'), s.get_text().strip()]), para[-1][1])
+                else:
+                    para.append((s.get_text(), 0))
+                    to_add = 'bold'
             elif 'italic' in s['style']:
-                para.append((s.get_text(), 1))
-                to_add = False
+                if to_add == 'italic':
+                    para[-1] = (' '.join([para[-1][0].strip(' \t\n'), s.get_text().strip()]), para[-1][1])
+                else:
+                    para.append((s.get_text(), 1))
+                    to_add = 'italic'
             else:
-                if to_add == True:
+                if to_add == 'normal':
                     para[-1] = (' '.join([para[-1][0].strip(' \t\n'), s.get_text().strip()]), para[-1][1])
                 else:
                     para.append((s.get_text(), 2))
-                    to_add = True
+                    to_add = 'normal'
         parsed_entry = get_entries(para)
+        query_duplicate = list(parsed_entry.keys())[0]
+        if query_duplicate in entries:
+            parsed_entry = {query_duplicate + ' d': list(parsed_entry.values())[0]}
         entries.update(parsed_entry)
         
     return entries

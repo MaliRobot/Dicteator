@@ -63,8 +63,10 @@ def main(argv):
     """   
     if 'cyr' in argv:
         script = 'cyr'
-    else:
+    elif 'lat' in argv:
         script = 'lat'
+    else:
+        script = 'default'
     if 'debug' in argv:
         debug = True
     else:
@@ -78,7 +80,6 @@ def main(argv):
     else:
         to_pickle = False
     
-    temp = open('titles', 'w', encoding="utf8")
     to_write = {DICT_TITLE: OrderedDict()}
     all_dicts = {}
     total = 0
@@ -107,24 +108,20 @@ def main(argv):
         for d in dictionary:
             if debug:
                 entry.debug()
-            temp.write(d + '\n')
             
     for e in all_dicts:
         to_write[DICT_TITLE].update({e:all_dicts[e].json_ready()})
-                
-    if script == 'cyr':
-        name = DICT_TITLE + '_cyr'
-    else:
-        name = DICT_TITLE + '_lat'
-        
+                  
+    name = DICT_TITLE + '_' + script
+     
     if to_pickle:
+        print('Saving to Pickle.')
         pickle.dump(all_dicts, open('out/%s' % (name), 'wb'))      
         
     outfile = open('parsed/%s.json' % (name), 'w', encoding="utf8")
     json.dump(to_write, outfile, ensure_ascii=False, indent=4, separators=(',', ': '))
     print('Parsed a total of ' + str(total) + ' paragraphs.')
     outfile.close()
-    temp.close()
     
 if __name__ == "__main__":
     main(argv)
