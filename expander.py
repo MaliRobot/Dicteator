@@ -98,8 +98,8 @@ def make_entries_from_sub(dictionary):
     
 def main():
     dictionary = load_pickle()
-    new_dictionary, mode = make_sufix_dict(dictionary)
-#    new_dictionary, mode = make_normalized_entries(dictionary)
+#    new_dictionary, mode = make_sufix_dict(dictionary)
+    new_dictionary, mode = make_normalized_entries(dictionary)
 #    new_dict_from_sub, mode = make_entries_from_sub(dictionary)
     save_json(new_dictionary, mode)
     

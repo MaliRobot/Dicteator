@@ -548,7 +548,7 @@ def get_examples(string, entry, title_of):
         string - stripped of processed data so far
         entry - updated Entry instance
     '''       
-    examples = re.findall('—.*(?:\)\.|\]\.|\);|\];|\.\s—|\s;|\w;)', string)
+    examples = re.findall('—.*(?:\)\.|\]\.|\);|\];|\.\s—|\s;|\w;|\)\s\.|\]\s\.)', string)
     if len(examples) > 0:
         string = string.replace(examples[0], '')
         examples = split_example(examples[0])
@@ -619,6 +619,11 @@ def cut_phrase(string, entry):
     return string, entry
     
 def get_forms(string, entry,title_of):
+    if re.match('само у\s.*?‘', string):
+        only = re.findall('само у\s.*?(?:‘)', string)[0][:-1]
+        entry.add_forms(only)
+        string = string.replace(only, '')
+    
     substr = re.findall('\D+\s\d\.[\s\w\.]{,3}', string)
     if substr != []:
         substr = substr[0]
@@ -660,6 +665,13 @@ def append_to_form(entry, next_str):
 
     if next_str.endswith(');') or next_str.endswith('];'):
         entry.increase_sub_entry_count()
+        
+def get_types(string, entry):
+    for abb in ['одр вид', 'поим прид', 'гл им', 'присв прид', 'пл т', 'прил сад']:
+        if abb in string:
+            entry.add_type(abb)
+            string = string.replace(abb, '')
+    return string, entry
         
 def string_by_string(string, entry, title_of, synonym):
     """
@@ -724,6 +736,7 @@ def string_by_string(string, entry, title_of, synonym):
     '''
     
     string, entry = get_forms(string, entry, title_of)
+    string, entry = get_types(string, entry)
     string, entry = get_meaning(string, entry, title_of) 
     string, entry = get_examples(string, entry, title_of)
     
@@ -740,7 +753,7 @@ def string_by_string(string, entry, title_of, synonym):
             string = string.replace(meaning, '')
             string.lstrip()
             string, location, reference = get_location_and_reference(string)
-            entry.add_meaning(meaning, reference, location)            
+            entry.add_meaning(meaning, reference, location)  
             
         '''
         In each pass through the loop we chop the string word by word. 
