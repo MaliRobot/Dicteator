@@ -14,7 +14,7 @@ class Entry():
     '''
     Class to contain data from dictionary entry.
     '''
-    def __init__(self, name):
+    def __init__(self, name, latin = None):
         self.title = name
         self.standard_title = None
         self.origin = None
@@ -34,6 +34,9 @@ class Entry():
         self.sub_entries_count = 0
         self.keys = [(0, 0)]
         self.phrases = {}
+        self.unique = True
+        self.latin = latin
+
     def add_see(self, other):
         '''
         self.other is equivalent to 'see:' in dictionary entry, pointing out
@@ -183,6 +186,8 @@ class Entry():
                 temp += s
         if temp != self.title:
             self.standard_title = temp
+    def not_unique(self):
+        self.unique = False
     def get_title(self):
         return self.title
     def get_gender(self):
@@ -197,28 +202,6 @@ class Entry():
         return self.forms 
     def get_type(self):
         return self.type
-    def get_wiki_type(self, key):
-        for typ in self.types[k]:
-            if typ in ['м','ж','с', 'гл им', 'м/ж', 'мн', 'зб', 'јд']:
-                return 'Именица'
-            if typ in ['учест', 'повр', 'несвр', '(не)свр', 'свр', 'прел']:
-                return 'Глагол'
-            if typ in ['рад', 'поим прид', 'присв прид', 'прид']:
-                return 'Придев'
-            if typ in ['прил',  'прил сад']:
-                return 'Прилог'
-            if typ in ['предл']:
-                return 'Предлог'
-            if typ in ['зам']:
-                return 'Заменица'
-            if typ in ['узвик']:
-                return 'Узвик'
-            if typ in ['бр']:
-                return 'број'
-            if typ in ['везн']:
-                return 'Везник'
-            if typ in ['реч.']:
-                return 'речца' 
                 
     def deaccentized_title_entry(self):
         '''
@@ -291,12 +274,17 @@ class Entry():
         Returns class attributes formated so that they can exported to JSON.
         '''
         standard_name = self.standard_title
+        original_title = self.original_title
+        script = self.script
         origin = self.origin
         gender = self.gender
         children = self.children
         other = self.other
+        keys = self.keys
         
-        json = OrderedDict({'standard name':standard_name, 'origin':origin, 'gender':gender, 'children':children, 'other':other})
+        json = OrderedDict({'standard name':standard_name, 'original title':original_title, 
+                            'origin':origin, 'gender':gender, 'children':children, 'other':other,
+                            'script':script, 'keys':keys})
         
         body = OrderedDict()
         for key in self.keys:

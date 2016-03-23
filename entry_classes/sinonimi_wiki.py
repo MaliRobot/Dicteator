@@ -364,7 +364,7 @@ def format_syn_asc(word_list, lat = False):
             string.append(',')
     return ''.join(string)
 
-def find_duplicate_keys(d, no_of_dup, dict_name):
+def find_duplicate_keys(d, no_of_dup):
     """
     Read dictionary keys and figure out which are duplicates. Store them in a
     txt file. If the file exists it skips this step and reads the file.
@@ -373,7 +373,7 @@ def find_duplicate_keys(d, no_of_dup, dict_name):
         duplicates = open("duplicates.txt", "r", encoding="utf8").read().split()
         return duplicates
     else:
-        all_keys = d[dict_name].keys()
+        all_keys = d.keys()
         all_keys_list = [re.sub(r'\([^)]*\)', '', x).strip() for x in all_keys]
         ordered_keys = Counter(all_keys_list).most_common(no_of_dup)
         duplicates = ([x[0] for x in ordered_keys if x[1] > 1])
@@ -596,5 +596,33 @@ def add_from_other(entry, d, lookup, sinonimi, skey, mode='syn'):
         for typ in sinonimi["Rečnik sinonima"][lookup]:
             for s in (dict(sinonimi["Rečnik sinonima"][lookup][typ][0])):
                 extract_meaning(dict(sinonimi["Rečnik sinonima"][lookup][typ][0][s]), entry, sinonimi, skey, mode, None, True)
+                
+def get_type_of_entry(dictionary, s, entry):
+    """
+    Transfering entries from parsing class to wiki class.
+    """
+    typ = list(dictionary[s].keys())[0] 
+    entry.set_type(typ)
+    
+    """
+    Iterate over the meanings of the dictionary entry. Only 'reference'
+    subdictionary is not ordered, so we use this fact to distinguish
+    between them. Pass submeaning for further processing.
+    """
+    for j, body in enumerate(dictionary[s][typ]):
+        if isinstance(body, OrderedDict):
+            for meaning in dictionary[s][typ][0]:
+                entry.increase_key()
+                extract_meaning(dictionary[s][typ][0][meaning], entry, dictionary, skey = meaning)
+        else:
+#       it's reference which is not needed because it contains no data
+            pass
+    return entry
+    
+def expand_dictionary(dictionary):
+    """
+    No need to expand Recnik sinonima.
+    """
+    return dictionary
                
                     

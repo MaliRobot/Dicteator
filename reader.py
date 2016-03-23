@@ -6,35 +6,48 @@ Created on Tue Aug 11 17:16:06 2015
 """
 
 import json, re, os, pickle, codecs
-from sys import argv
+import sys
+from getopt import getopt
 from tools.sr_lat2cyr2lat import *
 from collections import OrderedDict, Counter
-from entry_classes.sinonimi_wiki import *
+#from entry_classes.sinonimi_wiki import *
+from entry_classes.vd_class import *
+from entry_classes.vd_wiki import *
 
-def load_dict(source):
+def load_json(source):
     """
-    Load Recnik Sinonima from JSON.
+    Load dictionary from JSON.
     """
     file = open(source, 'r', encoding="utf8")
     dictionary_json = json.load(file, object_pairs_hook=OrderedDict)
+    dictionary_json = dictionary_json[next(iter(dictionary.keys()))]
     return dictionary_json
                     
-def make_entries(dictionary, to_text, to_pickle, debug, breakpoint, lat = False):
+def load_pickle(source):
+    """
+    Load dictionary from pickle.
+    """
+    file = open(source, 'rb')
+    dictionary_pickle = pickle.load(file, fix_imports=True, encoding="ASCII", errors="strict")
+    return dictionary_pickle                    
+                    
+def make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat = False):
     """
     Iterate over dictionary in order of entries. If entry is a duplicate, put 
     the object that represents it in the list which contains all objects with
     the same duplicate name. 
     """
-    dict_name = next(iter(dictionary.keys()))
-
+    dictionary = expand_dictionary(dictionary)    
+    
     if debug:
         names = []
     entries = {}
-    duplicates = find_duplicate_keys(dictionary, len(dictionary[dict_name]), dict_name)
-    for i, s in enumerate(dictionary[dict_name].keys()):
+    duplicates = find_duplicate_keys(dictionary, len(dictionary))
+    for i, s in enumerate(dictionary.keys()):
         if debug:        
-            names.append(" ".join([x for x in dictionary[dict_name][s].keys()]))
+            names.append(" ".join([x for x in dictionary[s].keys()]))
         entry_name = re.sub(r'\([^)]*\)', '', s).strip()
+        entry_name = re.sub(r'\s\{\d}', '', s).strip()
         entry = Entry(entry_name, lat)
         if entry_name in duplicates:
             entry.not_unique()
@@ -48,26 +61,10 @@ def make_entries(dictionary, to_text, to_pickle, debug, breakpoint, lat = False)
         """
         Getting the type of the word
         """
-        typ = list(dictionary[dict_name][s].keys())[0] 
-        entry.set_type(typ)
-        """
-        Iterate over the meanings of the dictionary entry. Only 'reference'
-        subdictionary is not ordered, so we use this fact to distinguish
-        between them. Pass submeaning for further processing.
-        """
-        for j, body in enumerate(dictionary[dict_name][s][typ]):
-            if isinstance(body, OrderedDict):
-                for meaning in dictionary[dict_name][s][typ][0]:
-                    entry.increase_key()
-                    extract_meaning(dictionary[dict_name][s][typ][0][meaning], entry, dictionary, skey = meaning)
-            else:
-#                it's reference which is not needed because it contains no data
-                pass
-
-        
-        """
-        Enable for debugging
+        entry = get_type_of_entry(dictionary, s, entry)
     
+        """
+        Stop early for debugging
         """
         if breakpoint:
             if i == breakpoint:
@@ -118,30 +115,49 @@ def make_entries(dictionary, to_text, to_pickle, debug, breakpoint, lat = False)
 
 def main(argv):
     to_text = to_pickle = to_json = debug = lat = False
-    print(argv)
-    if 't' in argv:
-        to_text = True
-    if 'p' in argv:
-        to_pickle = True
-    if 'j' in argv:
-        to_json = True
-    if 'd' in argv:
-        debug = True
-    if 'l' in argv:
-        lat = True
-    if 's' in argv:
-        source = SHORT
-    else:
-        source = FULL
+    print(sys.argv)
+    source = ''
+    try:
+        opts, args = getopt(sys.argv[1:],"hi:",["ifile="])
+    except GetoptError:
+        print('reader.py -i <inputfile> t p j d l')
+        sys.exit()
+
+    for opt, arg in opts:
+        print(opt, arg)
+        if opt == '-h':
+            print('reader.py -i <inputfile> t p j d l')
+            sys.exit()
+        elif opt in ("-i", "--ifile"):
+            source = arg
+            
+        if arg == 't':
+            to_text = True
+        if arg == 'p':
+            to_pickle = True
+        if arg == 'j':
+            to_json = True
+        if arg == 'd':
+            debug = True
+        if arg == 'l':
+            lat = True
+
     print(source, to_text, debug, lat)
     breakpoint = None
-    for a in argv:
+    for a in sys.argv:
         if a.isdigit():
             breakpoint = a
-    dictionary_json = load_dict(source)
+    if source.endswith('.json'):
+        dictionary = load_json(source)
+    else:
+        dictionary = load_pickle(source)
     if debug:
-        print (len(dictionary_json[dict_name]))
-    make_entries(dictionary_json, to_text, to_pickle, debug, breakpoint, lat)
+        print (len(dictionary[dict_name]))
+    
+    if source != '':   
+        make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat)
+    else:
+        sys.exit()
 
 if __name__ == "__main__":
-    main(argv)
+    main(sys.argv)
