@@ -48,15 +48,20 @@ def make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat
             names.append(" ".join([x for x in dictionary[s].keys()]))
         entry_name = re.sub(r'\([^)]*\)', '', s).strip()
         entry_name = re.sub(r'\s\{\d}', '', s).strip()
-        entry = Entry(entry_name, lat)
-        if entry_name in duplicates:
-            entry.not_unique()
-            if entry_name in entries:
-                entries[entry_name].append(entry)                
+#        sinonimi
+#        entry = Entry(entry_name, lat)
+        entry = dictionary[s]
+#        entry.debug()
+        
+        if len(entry.keys) == 1: # delete this after testing
+            if entry_name in duplicates:
+                entry.not_unique()
+                if entry_name in entries:
+                    entries[entry_name].append(entry)                
+                else:
+                    entries[entry_name] = [entry]
             else:
-                entries[entry_name] = [entry]
-        else:
-            entries[s] = entry       
+                entries[s] = entry     
         
         """
         Getting the type of the word
@@ -124,13 +129,14 @@ def main(argv):
         sys.exit()
 
     for opt, arg in opts:
-        print(opt, arg)
         if opt == '-h':
             print('reader.py -i <inputfile> t p j d l')
             sys.exit()
         elif opt in ("-i", "--ifile"):
             source = arg
             
+    for arg in sys.argv:
+        print(arg)
         if arg == 't':
             to_text = True
         if arg == 'p':
@@ -142,7 +148,7 @@ def main(argv):
         if arg == 'l':
             lat = True
 
-    print(source, to_text, debug, lat)
+    print('Reading file: ', source, ' Exporting wiki entries: ', to_text, ' Debugging: ', debug, 'Latin: ', lat)
     breakpoint = None
     for a in sys.argv:
         if a.isdigit():

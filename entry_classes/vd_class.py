@@ -220,7 +220,7 @@ class Entry():
         return Entry()
     def debug(self):
         print(self.title)
-        print(self.meanings_count)
+        print(self.keys)
         print('forms: ', self.forms)
         print('meanings:', self.meanings)
         print('subentries: ', self.sub_entries)
@@ -321,6 +321,32 @@ class Entry():
         
         json.update({'elements':body})
         return json
+    def get_wiki_type(self, k):
+        if k in self.type:
+            for l in self.type[k]:
+                for typ in self.type[k][l]:
+                    if typ in ['м', 'ж', 'с', 'гл им', 'м/ж', 'мн', 'зб', 'јд']:
+                        return 'Именица'
+                    if typ in ['учест', 'повр', 'несвр', '(не)свр', 'свр', 'прел']:
+                        return 'Глагол'
+                    if typ in ['рад', 'поим прид', 'присв прид', 'прид']:
+                        return 'Придев'
+                    if typ in ['прил',  'прил сад']:
+                        return 'Прилог'
+                    if typ in ['предл']:
+                        return 'Предлог'
+                    if typ in ['зам']:
+                        return 'Заменица'
+                    if typ in ['узвик']:
+                        return 'Узвик'
+                    if typ in ['бр']:
+                        return 'број'
+                    if typ in ['везн']:
+                        return 'Везник'
+                    if typ in ['реч.']:
+                        return 'речца' 
+                    return ''        
+        
     def to_wiki(self, begin = False, end = False):
         string = []
         if begin:
@@ -329,11 +355,112 @@ class Entry():
             else:
                 string.append('== %s ([[Викиречник:Српски|српски]]) ==\n\n' % (self.title))
                 
-        for k in self.keys:
-            string.append('=== %s ===\n' % (self.get_wiki_type()))
-            string.append(format_type(self.get_type(), self.get_wiki_type()))
+#        print(self.keys)                
+                
+        for i, k in enumerate(self.keys):
+            typ = self.get_wiki_type(k)
+#            print(typ)
+            if typ != '':
+                string.append('=== %s ===\n' % (typ))
+                string.append(self.format_type(self.get_type(), self.get_wiki_type(k)))
+                
+            if k in self.forms:    
+                string.append('{{Облици|')
+                for sk in self.forms[k]:
+                    string.append('\n# ')
+                    string.append(' '.join(self.forms[k][sk]))
+                    # reference
+                string.append('\n}}\n\n')                
+                
+            if k in self.meanings:    
+                string.append('{{Значење|')
+                for sk in self.meanings[k]:
+                    string.append('\n# ')
+                    string.append(' '.join(self.meanings[k][sk]))
+                    # reference
+                string.append('\n}}\n\n')
+                
+            if k in self.examples:    
+                string.append('{{Примери|')
+                for sk in self.examples[k]:
+                    string.append('\n# ')
+                    string.append(' '.join(self.examples[k][sk]))
+                    # reference
+                string.append('\n}}\n\n')
+                
+#            if k in self.synonyms:    
+#                string.append('{{Синоними|')
+#                for sk in self.synonyms[k]:
+#                    string.append('\n# ')
+#                    print(self.synonyms[k][sk])
+#                    string.append(' '.join(self.synonyms[k][sk]))
+#                    # reference
+#                string.append('\n}}\n\n')
+                
+            if k in self.phrases:    
+                string.append('{{Изрази|')
+                for sk in self.phrases[k]:
+                    string.append('\n# ')
+                    string.append(' '.join(self.phrases[k][sk]))
+                    # reference
+                string.append('\n}}\n\n')
+#            print(string)
+        """
+        End of Wiktionary entry
+        """
+        if end:
+            string.append('== Референце ==\n{{reflist}}\n\n== Напомене ==\n{{reflist|group="н"}}')
         
-        
+        return string
+
+    def format_type(self, lst, string):
+        formatted = ['{{српски-']
+        if string != None:
+            formatted.append(string.lower())
+        if string == 'Именица':
+            gender = []
+            if "м" in lst:
+                if gender == []:
+                    gender.append('|род=м')
+                else:
+                    gender.append(' м') 
+            if "ж" in lst:
+                if gender == []:
+                    gender.append('|род=ж')
+                else:
+                    gender.append(' ж') 
+            if "с" in lst:
+                if gender == []:
+                    gender.append('|род=с')
+                else:
+                    gender.append(' с')
+            if "м/ж" in lst:
+                if gender == []:
+                    gender.append('|род=м/ж')
+                else:
+                    gender.append(' м/ж')
+            formatted.append(''.join(gender))
+        elif string == 'Глагол':    
+            if '(не)свр' in lst:
+                asp = 'сврш. несврш.'
+            elif 'несвр' in lst:
+                asp = 'несврш.'
+            elif 'свр' in lst:
+                asp = 'сврш'
+            else:
+                asp = ''
+                
+            if 'прел' in lst:
+                gen = 'прел.'
+            else:
+                gen = 'непрел.'
+            
+            if asp:
+                formatted.append('|вид=' + asp)
+            if gen:
+                formatted.append('|род=' + gen)
+        formatted.append('}}\n')
+        return ''.join(formatted)
 
 def strip_all(entity, chars = None):
     '''

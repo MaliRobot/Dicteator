@@ -91,17 +91,22 @@ def make_entries_from_sub(dictionary):
         if len(dictionary[d].keys) > 1:
             for o in dictionary[d].sub_entries.keys():
                 for q in dictionary[d].sub_entries[o]:
-#                    i += 1
-                    print(dictionary[d].sub_entries[o][q])
+#                   try:
+                       q = list(dictionary[d].sub_entries[o][q].keys())[0]
+                       if '˜' in q:
+                           q = q.replace('˜', dictionary[d].title)
+                           print(q)
+#                   except TypeError:
+#                       pass
 #    print(i)
     return dict_subs, 'sub'
     
 def main():
     dictionary = load_pickle()
 #    new_dictionary, mode = make_sufix_dict(dictionary)
-    new_dictionary, mode = make_normalized_entries(dictionary)
-#    new_dict_from_sub, mode = make_entries_from_sub(dictionary)
-    save_json(new_dictionary, mode)
+#    new_dictionary, mode = make_normalized_entries(dictionary)
+    new_dict_from_sub, mode = make_entries_from_sub(dictionary)
+#    save_json(new_dictionary, mode)
     
     
 if __name__ == "__main__":
