@@ -36,6 +36,7 @@ class Entry():
         self.phrases = {}
         self.unique = True
         self.latin = latin
+        self.latin_title = None
 
     def add_see(self, other):
         '''
@@ -182,14 +183,19 @@ class Entry():
         for s in self.title:
             if s.lower() in AZBUKA_STR:
                 temp += s
-            elif s in ' {}1234567890d':
+            elif s in ' {}1234567890dд':
                 temp += s
-        if temp != self.title:
+        if temp != self.title or temp != None:
             self.standard_title = temp
     def not_unique(self):
         self.unique = False
     def get_title(self):
-        return self.title
+        title = self.title
+        if title.endswith(' d') or title.endswith(' д'):
+            title = title[:-2]
+        title = re.sub('{.*?}', '', title)
+        title = re.sub('\d', '', title)
+        return title.strip()
     def get_gender(self):
         return self.gender
     def get_other(self):
@@ -198,26 +204,107 @@ class Entry():
         return self.meanings_count
     def get_sub_entries_count(self):
         return self.sub_entries_count
-    def get_forms(self):
-        return self.forms 
+    def get_forms(self, k):
+        forms = []
+        for sk in self.forms[k]:
+            for w in self.forms[k][sk]:
+                # all this to get rid of things that aren't supposed to be here anyway...
+                if w.startswith('–'):
+                    return ', '.join(forms)
+                w = re.sub('\(.*?\)', '', w)
+                w = re.sub('\[.*?\]', '', w)
+                w = re.sub('\(.*?', '', w)
+                w = re.sub('\[.*?', '', w)
+                w = re.sub('.*?\)', '', w)
+                w = re.sub('.*?\]', '', w)
+                w = w.replace(';', '')
+                w = w.strip()
+                w = ' '.join(x for x in w.split() if w[0].isupper() == False)
+                # end
+                if w == 'обично' or w == '' or w[0].isupper() or w[0].isdigit():
+                    continue
+                else:
+                    forms.append(w)
+#        print(forms)
+        return ', '.join(forms) 
     def get_type(self):
         return self.type
-                
+    def get_meanings(self, k, sk):
+        meanings = []
+        for m in self.meanings[k][sk]:
+            if m == '⊜':
+                continue
+            refs = []
+            for ref in self.meanings[k][sk][m]:
+                if ref != None:
+                    print('ref', self.meanings[k][sk][m])
+                if ref != None:
+                    if ref.startswith('['):
+                        refs.append(self.process_bibliographical(ref))
+                    elif ref.startswith('('):
+                        refs.append(self.process_locations(ref))
+            meanings.append('. '.join([m, ' '.join(refs)]))
+        return ' '.join(meanings)
+    def get_examples(self, k, sk):
+        examples = []
+        for m in self.examples[k][sk]:
+            if m == '⊜':
+                continue
+            refs = []
+            for ref in self.examples[k][sk][m]:
+#                if ref != None:
+#                    print('ref', self.examples[k][sk][m])
+                if ref != None:
+                    if ref.startswith('['):
+                        refs.append(self.process_bibliographical(ref))
+                    elif ref.startswith('('):
+                        refs.append(self.process_locations(ref))
+            examples.append(' '.join([m, ' '.join(refs)]))
+        return ' '.join(examples)
+    def process_bibliographical(self, string):
+        bib_ref = []
+        bib = re.sub('[\[\]]', '', string)
+        bib = bib.split(';')
+        for b in bib: 
+            part_b = b.split()
+            part_b = [x.strip(',') for x in part_b]
+            book = ' '.join([x for x in part_b if x.isalpha()])
+            try:
+                book = LITERATURE[book]
+                pages = ', стр. ' + ', '.join([x for x in part_b if x.isdigit()])
+                bib_ref.append(''.join([book, pages]))
+            except KeyError:
+                pass
+        return ' '.join(bib_ref)
+        
+    def process_locations(self, string):
+        loc_ref = []
+        loc = re.sub('[\(\)]', '', string)
+        loc = loc.replace(';', '')
+        loc = loc.replace('—', '')
+        for l in loc.split(): 
+            try:
+                loc_ref.append(PLACES[l])
+            except KeyError:
+#                print(l)
+                 pass
+        return ' '.join(loc_ref)
+            
     def deaccentized_title_entry(self):
         '''
         This method sets title to deaccented title and standard_title to None.
         It maintains information on original title by storing it in origin.
         '''
-        if self.standard_title == None:
-            self.set_standard_title()
-        self.origin = self.title
-        self.title, self.standard_title = self.standard_title, None
+        if self.standard_title != None:
+            self.origin = self.title
+            self.title = self.standard_title
+            self.standard_title = None
     def copy_self(self):
         '''
         This method returns a copy of entry object. Useful when creating 
         deaccentized versions of original entries.
         '''
-        return Entry()
+        return self.__class__()
     def debug(self):
         print(self.title)
         print(self.keys)
@@ -345,47 +432,66 @@ class Entry():
                         return 'Везник'
                     if typ in ['реч.']:
                         return 'речца' 
-                    return ''        
+                    return '' 
+                    
+    def remove_and_format_type(self, k):
+        lst = []
+        other_types = ['м', 'ж', 'с', 'гл им', 'м/ж', 'мн', 'зб', 'јд', 'учест', 'повр', 'несвр', '(не)свр', 'свр',            
+                       'прел', 'рад', 'поим прид', 'присв прид', 'прид', 'прил', 'прил сад', 'предл', 'зам',  
+                       'узвик', 'бр', 'везн', 'реч.']
+        for sk in self.type[k]:
+            for t in self.type[k][sk]:
+                if t not in other_types:
+                    lst.append(ABBREVIATIONS[t])
+        return ' '.join(lst)
         
     def to_wiki(self, begin = False, end = False):
         string = []
         if begin:
             if self.script == 'lat':
-                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (self.title, self.original_title))
+                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (self.get_title(), self.latin_title))
             else:
-                string.append('== %s ([[Викиречник:Српски|српски]]) ==\n\n' % (self.title))
+                string.append('== %s ([[Викиречник:Српски|српски]]) ==\n\n' % (self.get_title()))
                 
-#        print(self.keys)                
-                
+        """
+        
+        """
         for i, k in enumerate(self.keys):
             typ = self.get_wiki_type(k)
-#            print(typ)
             if typ != '':
                 string.append('=== %s ===\n' % (typ))
                 string.append(self.format_type(self.get_type(), self.get_wiki_type(k)))
+                string.append('\n')
                 
-            if k in self.forms:    
-                string.append('{{Облици|')
-                for sk in self.forms[k]:
-                    string.append('\n# ')
-                    string.append(' '.join(self.forms[k][sk]))
-                    # reference
-                string.append('\n}}\n\n')                
+            if k in self.type:
+                tags = self.remove_and_format_type(k)
+            else:
+                tags = None
+                
+            if k in self.forms:
+                forms = self.get_forms(k)
+                if forms != '':
+                    string.append('{{Облици|')
+                    for sk in self.forms[k]:
+                        string.append('\n# ')
+                        string.append(self.get_forms(k))
+                        if tags:
+                            string.append(' ' + tags)
+                        # reference
+                    string.append('\n}}\n\n')                
                 
             if k in self.meanings:    
                 string.append('{{Значење|')
                 for sk in self.meanings[k]:
                     string.append('\n# ')
-                    string.append(' '.join(self.meanings[k][sk]))
-                    # reference
+                    string.append(self.get_meanings(k, sk))
                 string.append('\n}}\n\n')
                 
             if k in self.examples:    
                 string.append('{{Примери|')
                 for sk in self.examples[k]:
                     string.append('\n# ')
-                    string.append(' '.join(self.examples[k][sk]))
-                    # reference
+                    string.append(''.join(self.get_examples(k, sk)))
                 string.append('\n}}\n\n')
                 
 #            if k in self.synonyms:    
@@ -419,26 +525,28 @@ class Entry():
             formatted.append(string.lower())
         if string == 'Именица':
             gender = []
-            if "м" in lst:
-                if gender == []:
-                    gender.append('|род=м')
-                else:
-                    gender.append(' м') 
-            if "ж" in lst:
-                if gender == []:
-                    gender.append('|род=ж')
-                else:
-                    gender.append(' ж') 
-            if "с" in lst:
-                if gender == []:
-                    gender.append('|род=с')
-                else:
-                    gender.append(' с')
-            if "м/ж" in lst:
-                if gender == []:
-                    gender.append('|род=м/ж')
-                else:
-                    gender.append(' м/ж')
+            for k in lst:
+                for n in lst[k]:
+                    if "м" in lst[k][n]:
+                        if gender == []:
+                            gender.append('|род=м')
+                        else:
+                            gender.append(' м') 
+                    if "ж" in lst[k][n]:
+                        if gender == []:
+                            gender.append('|род=ж')
+                        else:
+                            gender.append(' ж') 
+                    if "с" in lst[k][n]:
+                        if gender == []:
+                            gender.append('|род=с')
+                        else:
+                            gender.append(' с')
+                    if "м/ж" in lst[k][n]:
+                        if gender == []:
+                            gender.append('|род=м/ж')
+                        else:
+                            gender.append(' м/ж')
             formatted.append(''.join(gender))
         elif string == 'Глагол':    
             if '(не)свр' in lst:
@@ -565,7 +673,7 @@ def parse_phrase(string):
     if find_reference:
         reference = find_reference[-1]
         if reference[1].isupper() == False:
-            reference = None
+           reference = None
             
     return phrase, meaning, example, location, reference, typ
         

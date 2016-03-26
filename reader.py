@@ -48,11 +48,11 @@ def make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat
             names.append(" ".join([x for x in dictionary[s].keys()]))
         entry_name = re.sub(r'\([^)]*\)', '', s).strip()
         entry_name = re.sub(r'\s\{\d}', '', s).strip()
+    
 #        sinonimi
 #        entry = Entry(entry_name, lat)
         entry = dictionary[s]
-#        entry.debug()
-        
+
         if len(entry.keys) == 1: # delete this after testing
             if entry_name in duplicates:
                 entry.not_unique()
