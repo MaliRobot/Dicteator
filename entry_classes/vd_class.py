@@ -211,6 +211,12 @@ class Entry():
                 # all this to get rid of things that aren't supposed to be here anyway...
                 if w.startswith('–'):
                     return ', '.join(forms)
+                if w.startswith('само у'):
+                    print(w)
+                    q = w.split()[1]
+                    q = self.title + q
+                    forms.append(q)
+                    continue
                 w = re.sub('\(.*?\)', '', w)
                 w = re.sub('\[.*?\]', '', w)
                 w = re.sub('\(.*?', '', w)
@@ -227,8 +233,56 @@ class Entry():
                     forms.append(w)
 #        print(forms)
         return ', '.join(forms) 
+        
     def get_type(self):
         return self.type
+        
+    def subentries_to_forms_and_synonyms(self, k, title):
+        forms = []
+        synonyms = []
+        for sk in self.sub_entries[k]:
+            for w in self.sub_entries[k][sk]:
+                w_mod = w
+                if w in ' .':
+                    continue
+                if '˜' in w_mod:
+                    w_mod = w_mod.replace('˜', title)
+                w_mod = w_mod.split()
+                w_mod = [x for x in w_mod if not w.startswith('-')]
+                w_mod = ''.join(w_mod)
+                w_mod = '[[' + w_mod + ']]'
+                loc = None
+                bib = None
+                for se in self.sub_entries[k][sk][w]:
+                    for l in se:
+                        if l == None:
+                            continue
+                        if l.startswith('('):
+                            loc = self.process_locations(l)
+                        elif l.startswith('['):
+                            bib = self.process_bibliographical(l)
+                deacc_w = self.deaccent_string(w_mod)
+                deacc_title = self.deaccent_string(title)
+                if loc != None:
+                    w_mod = w_mod + ' ' + loc
+                if bib != None:
+                    w_mod = w_mod + ' ' + bib
+                if deacc_w == deacc_title:
+                    forms.append(w_mod)
+                else:
+                    synonyms.append(w_mod)
+#        print(forms, synonyms)
+        return ' '.join(forms), ' '.join(synonyms)
+            
+    def deaccent_string(self, string):
+        temp = ''
+        for s in string:
+            if s.lower() in AZBUKA_STR:
+                temp += s
+            elif s in ' {}1234567890dд':
+                temp += s
+        return temp
+        
     def get_meanings(self, k, sk):
         meanings = []
         for m in self.meanings[k][sk]:
@@ -236,8 +290,8 @@ class Entry():
                 continue
             refs = []
             for ref in self.meanings[k][sk][m]:
-                if ref != None:
-                    print('ref', self.meanings[k][sk][m])
+#                if ref != None:
+##                    print('ref', self.meanings[k][sk][m])
                 if ref != None:
                     if ref.startswith('['):
                         refs.append(self.process_bibliographical(ref))
@@ -245,6 +299,7 @@ class Entry():
                         refs.append(self.process_locations(ref))
             meanings.append('. '.join([m, ' '.join(refs)]))
         return ' '.join(meanings)
+        
     def get_examples(self, k, sk):
         examples = []
         for m in self.examples[k][sk]:
@@ -261,6 +316,64 @@ class Entry():
                         refs.append(self.process_locations(ref))
             examples.append(' '.join([m, ' '.join(refs)]))
         return ' '.join(examples)
+        
+    def get_synonyms(self, k, add_syns):
+        final = []
+        for k in self.synonyms:
+            for sk in self.synonyms[k]:
+                syn_lst = self.synonyms[k][sk][0]
+                syns = syn_lst[0].split(',')
+                syns = [x for x in syns if x != '']
+                syns = [x.split()[0] for x in syns]
+                syns = [x.strip() for x in syns if x != '']
+                syns = ['[[' + x +']]' for x in syns if x != '']
+                
+#                if syn_lst[1] != '⮂':
+                final.append('{{Синоними|')
+#                else:
+#                    final.append('{{Антоними|')
+                final.append('\n#')
+                final.append(', '.join(syns))
+                for i in range(2, len(syn_lst)):
+                    if syn_lst[i] != None:
+                        if syn_lst[i].startswith('('):
+                            final.append(self.process_locations(syn_lst[i]))
+                        elif syn_lst[i].startswith('['):
+                            final.append(self.process_bibliographical(syn_lst[i]))
+                if add_syns != []:
+                    final.append(add_syns)
+                final.append(' \n}}\n\n')
+        return ' '.join(final)
+        
+    def get_phrases(self, k, sk):
+        final = []
+        for phrase in self.phrases[k][sk]:
+            final.append('# ')
+            title = phrase
+            final.append(title)
+            loc = None
+            bib = None
+            meaning = []
+            for p in self.phrases[k][sk][phrase]:
+                if p != None:
+                    if p.startswith('('):
+                        loc = self.process_locations(p)
+                    elif p.startswith('['):
+                        bib = self.process_locations(p)
+                    elif p in "△□▭":
+                        pass
+                    else:
+                        meaning.append(p)
+            if meaning != []:
+                meaning = '; '.join(['"'+x+'"' for x in meaning])
+                final.append('(' + meaning + ').')
+            if loc != None:
+                final.append(loc)
+            if bib != None:
+                final.append(bib)
+            final.append('\n')
+        return ' '.join(final)
+        
     def process_bibliographical(self, string):
         bib_ref = []
         bib = re.sub('[\[\]]', '', string)
@@ -271,8 +384,12 @@ class Entry():
             book = ' '.join([x for x in part_b if x.isalpha()])
             try:
                 book = LITERATURE[book]
-                pages = ', стр. ' + ', '.join([x for x in part_b if x.isdigit()])
-                bib_ref.append(''.join([book, pages]))
+                pages = ', '.join([x for x in part_b if x.isdigit()])
+                if pages != '':
+                    pages = ', стр. ' + ', '.join([x for x in part_b if x.isdigit()])
+                    bib_ref.append(''.join([book, pages]))
+                else:
+                    bib_ref.append(''.join([book]))
             except KeyError:
                 pass
         return ' '.join(bib_ref)
@@ -299,12 +416,14 @@ class Entry():
             self.origin = self.title
             self.title = self.standard_title
             self.standard_title = None
+            
     def copy_self(self):
         '''
         This method returns a copy of entry object. Useful when creating 
         deaccentized versions of original entries.
         '''
         return self.__class__()
+        
     def debug(self):
         print(self.title)
         print(self.keys)
@@ -409,6 +528,9 @@ class Entry():
         json.update({'elements':body})
         return json
     def get_wiki_type(self, k):
+        """
+        Determine the type of word by comparing tags.
+        """
         if k in self.type:
             for l in self.type[k]:
                 for typ in self.type[k][l]:
@@ -435,6 +557,11 @@ class Entry():
                     return '' 
                     
     def remove_and_format_type(self, k):
+        """
+        Remove all tags that are used to determine the type of word. We do this
+        because these are only needed in the beginning of the Wiki entry, the
+        rest uses all other tags.
+        """
         lst = []
         other_types = ['м', 'ж', 'с', 'гл им', 'м/ж', 'мн', 'зб', 'јд', 'учест', 'повр', 'несвр', '(не)свр', 'свр',            
                        'прел', 'рад', 'поим прид', 'присв прид', 'прид', 'прил', 'прил сад', 'предл', 'зам',  
@@ -446,7 +573,13 @@ class Entry():
         return ' '.join(lst)
         
     def to_wiki(self, begin = False, end = False):
+        """
+        Constructs Wiktionary entry from formatted object attributes. Returns a
+        list.
+        """
         string = []
+        add_forms = []
+        add_syns = []
         if begin:
             if self.script == 'lat':
                 string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (self.get_title(), self.latin_title))
@@ -457,6 +590,8 @@ class Entry():
         
         """
         for i, k in enumerate(self.keys):
+            if k in self.sub_entries:
+                add_forms, add_syns = self.subentries_to_forms_and_synonyms(k, self.get_title())
             typ = self.get_wiki_type(k)
             if typ != '':
                 string.append('=== %s ===\n' % (typ))
@@ -475,6 +610,8 @@ class Entry():
                     for sk in self.forms[k]:
                         string.append('\n# ')
                         string.append(self.get_forms(k))
+                        if add_forms != []:
+                            string.append(add_forms)
                         if tags:
                             string.append(' ' + tags)
                         # reference
@@ -494,22 +631,15 @@ class Entry():
                     string.append(''.join(self.get_examples(k, sk)))
                 string.append('\n}}\n\n')
                 
-#            if k in self.synonyms:    
-#                string.append('{{Синоними|')
-#                for sk in self.synonyms[k]:
-#                    string.append('\n# ')
-#                    print(self.synonyms[k][sk])
-#                    string.append(' '.join(self.synonyms[k][sk]))
-#                    # reference
-#                string.append('\n}}\n\n')
+            if k in self.synonyms:    
+                string.append(self.get_synonyms(k, add_syns))
                 
             if k in self.phrases:    
-                string.append('{{Изрази|')
+                string.append('{{Изрази|\n')
                 for sk in self.phrases[k]:
-                    string.append('\n# ')
-                    string.append(' '.join(self.phrases[k][sk]))
+                    string.append(self.get_phrases(k, sk))
                     # reference
-                string.append('\n}}\n\n')
+                string.append('}}\n\n')
 #            print(string)
         """
         End of Wiktionary entry
@@ -646,6 +776,7 @@ def parse_phrase(string):
     '''
     string = re.sub('\d\.', '', string)
     phrase = re.findall('.*?[‘|\([A-Z]|;|\.]', string)
+#    print(phrase)
 
     if phrase:
         phrase = phrase[0][:-1]
@@ -708,8 +839,8 @@ def analyze_phrase(string, entry):
     Strip symbol from the start of the string and find all phrases.
     '''
     string = string[1:].strip()
-    lst_str = re.split(';\s.*(?=(?:;|\.))', string)
-    lst_str = [x for x in lst_str if x not in '.;']
+    lst_str = re.split(';\s*(?![^\(\)\[\]]*\))', string)
+#    print(lst_str)
     if len(lst_str) > 1:
         repeat_phrase = None
         for lst in lst_str:
@@ -731,17 +862,18 @@ def get_meaning(string, entry, title_of):
     if we encounter ';' string which is a subentry separator.
     '''
     meaning = location = reference = None
-    meaning = re.findall('‘.*?[\'|’][\s|\.|;]{0,1}', string)
-    
-    if len(meaning) != 0:
-        meaning = meaning[0]
-        if meaning.endswith(';'):
-            meaning = meaning[:-1]
-        string = string.replace(meaning, ' ')
+    meaning_lst = re.findall('‘.*?[\)|\]|\'|’|\s][\.|;]', string)
+#    print(meaning)
+    if len(meaning_lst) != 0:
+        meaning_rl = meaning_lst[0]
+        string = string.replace(meaning_rl, ' ')
         string = string.lstrip()
-
-        if meaning.endswith('.') == False:
-            _, location, reference = get_location_and_reference(meaning)
+        try:
+            meaning = re.findall('‘.*?[\'|’]', meaning_rl)[0]
+        except IndexError:
+            print('qqq', meaning_rl)
+        
+        _, location, reference = get_location_and_reference(meaning_rl)
         if meaning:
             meaning = meaning.strip('.‘\'’ ')
             entry.add_meaning(meaning, reference, location)
@@ -1132,7 +1264,7 @@ def analyze_entry(para):
         0 = connecting to all synonyms of an entry or meaning (black arrow symbol)
         1 = connecting to a certain sysnonym of an entry or meaning (white arrow symbol)
         2 = antonym (arrow with two tips)
-        3 = not a complete synonymy (two arrows in opposite direction)
+        3 = probable synonymy (two arrows in opposite direction)
     """
     para = [(x[0].replace('\n', ''), x[1]) for x in para]
     para = [(x[0].replace('\t', ''), x[1]) for x in para]

@@ -10,6 +10,7 @@ Created on Tue Mar 22 16:54:07 2016
 import os, re
 from collections import Counter
 from entry_classes.vd_class import *
+from copy import deepcopy
 
 i = 0
         
@@ -63,14 +64,15 @@ def make_deaccented_entry(entry, dictionary):
     would be identical and in this case new instance of entry would not be
     created.
     """
-    copy = dictionary[entry]
-    copy.deaccentized_title_entry()
-#    print(copy.origin, copy.standard_title, copy.title)
-    if copy.title != None:
-        title = copy.title
-        if title != '' and copy.title not in dictionary.keys():
-            dictionary.update({title:copy})
-    dictionary[entry].origin = copy.title
+    dictionary[entry].set_standard_title()
+    if dictionary[entry].standard_title != dictionary[entry].title or dictionary[entry].standard_title != None:
+        new_entry = deepcopy(dictionary[entry])
+        new_entry.deaccentized_title_entry()
+#        print(new_entry.origin, new_entry.standard_title, new_entry.title, dictionary[entry].title)
+        if new_entry.title != None:
+            title = new_entry.title
+            if new_entry != '' and new_entry.title not in dictionary.keys():
+                dictionary.update({title:new_entry})
     return dictionary
     
 def make_subentries_of_entry(entry, dictionary):
@@ -131,4 +133,4 @@ def expand_dictionary(dictionary):
     
 def concat_entry(strings):
 #    print(strings)
-    return ' '.join(strings)
+    return ''.join(strings)
