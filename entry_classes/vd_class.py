@@ -189,7 +189,15 @@ class Entry():
             self.standard_title = temp
     def not_unique(self):
         self.unique = False
+    """
+    The following get methods are meant to be used for generating Wiktionary
+    entries. Therefore, they will return strings, or list of strings, in 
+    Wiki markup.
+    """
     def get_title(self):
+        """
+        Returns title without extra sings used to indicate duplication
+        """
         title = self.title
         if title.endswith(' d') or title.endswith(' д'):
             title = title[:-2]
@@ -211,11 +219,17 @@ class Entry():
                 # all this to get rid of things that aren't supposed to be here anyway...
                 if w.startswith('–'):
                     return ', '.join(forms)
+                if '˜' in w:
+                    w = w.replace('˜', self.title)
                 if w.startswith('само у'):
                     print(w)
-                    q = w.split()[1]
-                    q = self.title + q
-                    forms.append(q)
+                    if k == (0, 0):
+                        w = self.title + w
+                    elif k in self.sub_entries:
+                        if sk in self.sub_entries[k]:
+                            print(self.sub_entries[k][sk], self.title)
+                            w = list(self.sub_entries[k][sk].keys())[0] + w
+                    forms.append(w)
                     continue
                 w = re.sub('\(.*?\)', '', w)
                 w = re.sub('\[.*?\]', '', w)
@@ -238,6 +252,11 @@ class Entry():
         return self.type
         
     def subentries_to_forms_and_synonyms(self, k, title):
+        """
+        Takes names of sub entries and depending on the similarity with
+        the entry name, classifies them as either forms of the entry or
+        its synonyms.
+        """
         forms = []
         synonyms = []
         for sk in self.sub_entries[k]:
@@ -275,6 +294,9 @@ class Entry():
         return ' '.join(forms), ' '.join(synonyms)
             
     def deaccent_string(self, string):
+        """
+        Remove accents from the string letters.
+        """
         temp = ''
         for s in string:
             if s.lower() in AZBUKA_STR:
@@ -327,11 +349,9 @@ class Entry():
                 syns = [x.split()[0] for x in syns]
                 syns = [x.strip() for x in syns if x != '']
                 syns = ['[[' + x +']]' for x in syns if x != '']
-                
-#                if syn_lst[1] != '⮂':
+
                 final.append('{{Синоними|')
-#                else:
-#                    final.append('{{Антоними|')
+
                 final.append('\n#')
                 final.append(', '.join(syns))
                 for i in range(2, len(syn_lst)):
@@ -342,14 +362,19 @@ class Entry():
                             final.append(self.process_bibliographical(syn_lst[i]))
                 if add_syns != []:
                     final.append(add_syns)
-                final.append(' \n}}\n\n')
+                final.append(' $')
+            final.append(' \n}}\n\n')
         return ' '.join(final)
         
     def get_phrases(self, k, sk):
         final = []
         for phrase in self.phrases[k][sk]:
             final.append('# ')
-            title = phrase
+            if phrase == None:
+                title = self.phrases[k][sk][phrase][0]
+                self.phrases[k][sk][phrase] = self.phrases[k][sk][phrase][1:]
+            else:
+                title = phrase
             final.append(title)
             loc = None
             bib = None
@@ -372,6 +397,7 @@ class Entry():
             if bib != None:
                 final.append(bib)
             final.append('\n')
+#        print(final)
         return ' '.join(final)
         
     def process_bibliographical(self, string):
@@ -386,7 +412,8 @@ class Entry():
                 book = LITERATURE[book]
                 pages = ', '.join([x for x in part_b if x.isdigit()])
                 if pages != '':
-                    pages = ', стр. ' + ', '.join([x for x in part_b if x.isdigit()])
+                    pages = ', стр. ' + ', '.join([x for x in part_b if x.isdigit()]) + '</ref>'
+                    book = book.replace('</ref>', pages)
                     bib_ref.append(''.join([book, pages]))
                 else:
                     bib_ref.append(''.join([book]))
@@ -529,7 +556,7 @@ class Entry():
         return json
     def get_wiki_type(self, k):
         """
-        Determine the type of word by comparing tags.
+        Determine the type of word by comparing tags. 
         """
         if k in self.type:
             for l in self.type[k]:
@@ -574,73 +601,85 @@ class Entry():
         
     def to_wiki(self, begin = False, end = False):
         """
-        Constructs Wiktionary entry from formatted object attributes. Returns a
-        list.
+        Constructs Wiktionary entry from formatted object attributes in a form
+        of the list.
         """
         string = []
         add_forms = []
         add_syns = []
+               
         if begin:
             if self.script == 'lat':
                 string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (self.get_title(), self.latin_title))
             else:
                 string.append('== %s ([[Викиречник:Српски|српски]]) ==\n\n' % (self.get_title()))
-                
         """
-        
+        Basic case is when an entry contains only reference to the other entry
+        - "see" tag. 
         """
-        for i, k in enumerate(self.keys):
-            if k in self.sub_entries:
-                add_forms, add_syns = self.subentries_to_forms_and_synonyms(k, self.get_title())
-            typ = self.get_wiki_type(k)
-            if typ != '':
-                string.append('=== %s ===\n' % (typ))
-                string.append(self.format_type(self.get_type(), self.get_wiki_type(k)))
-                string.append('\n')
-                
-            if k in self.type:
-                tags = self.remove_and_format_type(k)
+        if self.other != []:
+            if self.script == 'lat':
+                string.append(SAME_AS_LAT + '[[' + ' '.join(self.other) +']] $\n\n')
             else:
-                tags = None
-                
-            if k in self.forms:
-                forms = self.get_forms(k)
-                if forms != '':
-                    string.append('{{Облици|')
-                    for sk in self.forms[k]:
+                string.append(SAME_AS_CYR + '[[' + ' '.join(self.other) +']] $\n\n')
+        else:
+            """
+            
+            """
+            for i, k in enumerate(self.keys):
+                if k in self.sub_entries:
+                    add_forms, add_syns = self.subentries_to_forms_and_synonyms(k, self.get_title())
+                typ = self.get_wiki_type(k)
+                if typ != '':
+                    string.append('=== %s ===\n' % (typ))
+                    string.append(self.format_type(self.get_type(), self.get_wiki_type(k)))
+                    string.append('\n')
+                    
+                if k in self.type:
+                    tags = self.remove_and_format_type(k)
+                else:
+                    tags = None
+                    
+                if k in self.forms:
+                    forms = self.get_forms(k)
+                    if forms != '':
+                        string.append('{{Облици|')
+                        for sk in self.forms[k]:
+                            string.append('\n# ')
+                            string.append(self.get_forms(k))
+                            if add_forms != []:
+                                string.append(add_forms)
+                            if tags:
+                                string.append(' ' + tags)
+                            string.append(' $')
+                        string.append('\n}}\n\n')                
+                    
+                if k in self.meanings:    
+                    string.append('{{Значење|')
+                    for sk in self.meanings[k]:
                         string.append('\n# ')
-                        string.append(self.get_forms(k))
-                        if add_forms != []:
-                            string.append(add_forms)
-                        if tags:
-                            string.append(' ' + tags)
-                        # reference
-                    string.append('\n}}\n\n')                
-                
-            if k in self.meanings:    
-                string.append('{{Значење|')
-                for sk in self.meanings[k]:
-                    string.append('\n# ')
-                    string.append(self.get_meanings(k, sk))
-                string.append('\n}}\n\n')
-                
-            if k in self.examples:    
-                string.append('{{Примери|')
-                for sk in self.examples[k]:
-                    string.append('\n# ')
-                    string.append(''.join(self.get_examples(k, sk)))
-                string.append('\n}}\n\n')
-                
-            if k in self.synonyms:    
-                string.append(self.get_synonyms(k, add_syns))
-                
-            if k in self.phrases:    
-                string.append('{{Изрази|\n')
-                for sk in self.phrases[k]:
-                    string.append(self.get_phrases(k, sk))
-                    # reference
-                string.append('}}\n\n')
-#            print(string)
+                        string.append(self.get_meanings(k, sk))
+                        string.append(' $')
+                    string.append('\n}}\n\n')
+                    
+                if k in self.examples:    
+                    string.append('{{Примери|')
+                    for sk in self.examples[k]:
+                        string.append('\n# ')
+                        string.append(''.join(self.get_examples(k, sk)))
+                        string.append(' $')
+                    string.append('\n}}\n\n')
+                    
+                if k in self.synonyms:    
+                    string.append(self.get_synonyms(k, add_syns))
+                    
+                if k in self.phrases:    
+                    string.append('{{Изрази|\n')
+                    for sk in self.phrases[k]:
+                        string.append(self.get_phrases(k, sk))
+                        string.append(' $')
+                    string.append('}}\n\n')
+    #            print(string)
         """
         End of Wiktionary entry
         """
