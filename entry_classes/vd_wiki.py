@@ -5,7 +5,7 @@ extract other entries from original ones more easily.
 
 Created on Tue Mar 22 16:54:07 2016
 
-@author: Milosh
+@author: Misha
 """
 import os, re
 from collections import Counter
@@ -36,25 +36,6 @@ def get_type_of_entry(dictionary, s, entry):
     """
     Transfering entries from parsing class to wiki class.
     """
-    global i
-    if len(dictionary[s].keys) == 1:
-        if len(dictionary[s].type) > 0:
-#            print(dictionary[s]['elements']['(0, 0)']['type'])
-            pass
-        else:
-            if dictionary[s].other != []:
-                pass
-            else:
-#                print(s)
-                pass
-#                i += 1
-    else:
-        pass
-#        for k in dictionary[s]['keys']:
-#            k = str(k)
-#    #        print(dictionary[s]['elements'])
-#            if 'type' in dictionary[s]['elements'][k]:
-#                print(dictionary[s]['elements'][k]['type'])
     return entry
     
 def make_deaccented_entry(entry, dictionary):
@@ -68,7 +49,7 @@ def make_deaccented_entry(entry, dictionary):
     if dictionary[entry].standard_title != dictionary[entry].title or dictionary[entry].standard_title != None:
         new_entry = deepcopy(dictionary[entry])
         new_entry.deaccentized_title_entry()
-#        print(new_entry.origin, new_entry.standard_title, new_entry.title, dictionary[entry].title)
+
         if new_entry.title != None:
             title = new_entry.title
             if new_entry != '' and new_entry.title not in dictionary.keys():
@@ -105,8 +86,7 @@ def make_subentries_of_entry(entry, dictionary):
                         dictionary[title] = new_entry
                         i += 1
                         new_entry.set_standard_title()
-#                        print('#######################')
-#                        new_entry.debug()
+
                         if new_entry.standard_title != None and new_entry.standard_title not in dictionary:
                             one_more_entry = new_entry
                             one_more_entry.title = new_entry.standard_title
@@ -116,8 +96,7 @@ def make_subentries_of_entry(entry, dictionary):
                             i += 1
             except KeyError as e:
                 print('error', e)
-#                print(se)
-#                dictionary[entry].debug()
+
     return dictionary
     
 def expand_dictionary(dictionary):
@@ -133,4 +112,5 @@ def expand_dictionary(dictionary):
     
 def concat_entry(strings):
 #    print(strings)
-    return ''.join(strings)
+    final = ''.join(strings)
+    return final

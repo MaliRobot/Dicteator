@@ -12,7 +12,8 @@ import re
 
 class Entry():
     '''
-    Class to contain data from dictionary entry.
+    Class to contain data from dictionary entry and methods for processing
+    dictionary entries and transforming them to Wiktionary entries.
     '''
     def __init__(self, name, latin = None):
         self.title = name
@@ -37,6 +38,7 @@ class Entry():
         self.unique = True
         self.latin = latin
         self.latin_title = None
+        self.book_no = None
 
     def add_see(self, other):
         '''
@@ -219,15 +221,17 @@ class Entry():
                 # all this to get rid of things that aren't supposed to be here anyway...
                 if w.startswith('–'):
                     return ', '.join(forms)
+                if w == 'се' and forms != []:
+                    forms[-1] = forms[-1] + ' ' + w
                 if '˜' in w:
                     w = w.replace('˜', self.title)
                 if w.startswith('само у'):
-                    print(w)
+#                    print(w)
                     if k == (0, 0):
                         w = self.title + w
                     elif k in self.sub_entries:
                         if sk in self.sub_entries[k]:
-                            print(self.sub_entries[k][sk], self.title)
+#                            print(self.sub_entries[k][sk], self.title)
                             w = list(self.sub_entries[k][sk].keys())[0] + w
                     forms.append(w)
                     continue
@@ -245,7 +249,6 @@ class Entry():
                     continue
                 else:
                     forms.append(w)
-#        print(forms)
         return ', '.join(forms) 
         
     def get_type(self):
@@ -266,9 +269,17 @@ class Entry():
                     continue
                 if '˜' in w_mod:
                     w_mod = w_mod.replace('˜', title)
-                w_mod = w_mod.split()
-                w_mod = [x for x in w_mod if not w.startswith('-')]
-                w_mod = ''.join(w_mod)
+                w_mod = w_mod.replace(' d', '')
+                w_mod = re.sub('\d', '', w_mod)
+                w_mod = w_mod.strip()
+                if self.deaccent_string(self.title) not in self.deaccent_string(w_mod) and ' се' not in self.title:
+#                    print(w_mod, 'ddd', self.title)
+                    w_mod = w_mod.split()
+                    w_mod = [x for x in w_mod if not w.startswith('-')]
+                    w_mod = [x for x in w_mod if x != '']
+                    w_mod = [x.strip(', ') for x in w_mod]
+                
+                    w_mod = ']] \n# [['.join(w_mod)
                 w_mod = '[[' + w_mod + ']]'
                 loc = None
                 bib = None
@@ -291,7 +302,7 @@ class Entry():
                 else:
                     synonyms.append(w_mod)
 #        print(forms, synonyms)
-        return ' '.join(forms), ' '.join(synonyms)
+        return ', '.join(forms), ', '.join(synonyms)
             
     def deaccent_string(self, string):
         """
@@ -310,49 +321,51 @@ class Entry():
         for m in self.meanings[k][sk]:
             if m == '⊜':
                 continue
+            mn = m
+            if mn[0].islower():
+                mn = m[0].capitalize() + m[1:]
             refs = []
             for ref in self.meanings[k][sk][m]:
-#                if ref != None:
-##                    print('ref', self.meanings[k][sk][m])
                 if ref != None:
                     if ref.startswith('['):
                         refs.append(self.process_bibliographical(ref))
                     elif ref.startswith('('):
                         refs.append(self.process_locations(ref))
-            meanings.append('. '.join([m, ' '.join(refs)]))
-        return ' '.join(meanings)
+            meanings.append('. '.join([mn, ' '.join(refs)]))
+        return ', \n# '.join(meanings)
         
     def get_examples(self, k, sk):
         examples = []
         for m in self.examples[k][sk]:
             if m == '⊜':
                 continue
+            ex = m
+            if not m.endswith('.'):
+                ex = m + '.'
             refs = []
             for ref in self.examples[k][sk][m]:
-#                if ref != None:
-#                    print('ref', self.examples[k][sk][m])
                 if ref != None:
                     if ref.startswith('['):
                         refs.append(self.process_bibliographical(ref))
                     elif ref.startswith('('):
                         refs.append(self.process_locations(ref))
-            examples.append(' '.join([m, ' '.join(refs)]))
-        return ' '.join(examples)
+            examples.append(' '.join([ex, ' '.join(refs)]))
+        return ', \n# '.join(examples)
         
     def get_synonyms(self, k, add_syns):
         final = []
-        for k in self.synonyms:
+        if k in self.synonyms:
             for sk in self.synonyms[k]:
                 syn_lst = self.synonyms[k][sk][0]
                 syns = syn_lst[0].split(',')
                 syns = [x for x in syns if x != '']
                 syns = [x.split()[0] for x in syns]
-                syns = [x.strip() for x in syns if x != '']
+                syns = [x.strip(', ') for x in syns if x != '']
                 syns = ['[[' + x +']]' for x in syns if x != '']
 
                 final.append('{{Синоними|')
 
-                final.append('\n#')
+                final.append('\n# ')
                 final.append(', '.join(syns))
                 for i in range(2, len(syn_lst)):
                     if syn_lst[i] != None:
@@ -360,11 +373,13 @@ class Entry():
                             final.append(self.process_locations(syn_lst[i]))
                         elif syn_lst[i].startswith('['):
                             final.append(self.process_bibliographical(syn_lst[i]))
+                
                 if add_syns != []:
-                    final.append(add_syns)
-                final.append(' $')
+                    print(add_syns)
+                    final.append(', ' + add_syns)
+                final.append(BOOKS[self.book_no])
             final.append(' \n}}\n\n')
-        return ' '.join(final)
+        return ''.join(final)
         
     def get_phrases(self, k, sk):
         final = []
@@ -412,11 +427,11 @@ class Entry():
                 book = LITERATURE[book]
                 pages = ', '.join([x for x in part_b if x.isdigit()])
                 if pages != '':
-                    pages = ', стр. ' + ', '.join([x for x in part_b if x.isdigit()]) + '</ref>'
-                    book = book.replace('</ref>', pages)
-                    bib_ref.append(''.join([book, pages]))
+                    pages = ', стр. ' + ', '.join([x for x in part_b if x.isdigit()]) + '.</ref>'
+                    book = book.replace('.</ref>', pages)
+                    bib_ref.append(book)
                 else:
-                    bib_ref.append(''.join([book]))
+                    bib_ref.append(book)
             except KeyError:
                 pass
         return ' '.join(bib_ref)
@@ -581,7 +596,7 @@ class Entry():
                         return 'Везник'
                     if typ in ['реч.']:
                         return 'речца' 
-                    return '' 
+        return ''
                     
     def remove_and_format_type(self, k):
         """
@@ -607,6 +622,7 @@ class Entry():
         string = []
         add_forms = []
         add_syns = []
+        book = BOOKS[self.book_no]
                
         if begin:
             if self.script == 'lat':
@@ -619,16 +635,29 @@ class Entry():
         """
         if self.other != []:
             if self.script == 'lat':
-                string.append(SAME_AS_LAT + '[[' + ' '.join(self.other) +']] $\n\n')
+                string.append(SAME_AS_LAT + '[[' + ' '.join(self.other) +']] ' + book + '\n\n')
             else:
-                string.append(SAME_AS_CYR + '[[' + ' '.join(self.other) +']] $\n\n')
+                string.append(SAME_AS_CYR + '[[' + ' '.join(self.other) +']] ' + book + '\n\n')
         else:
             """
-            
+            Get all data for all the keys, avoiding taking data for sub entries that are syntaxically
+            different than main entry name, apart from accents.
             """
             for i, k in enumerate(self.keys):
+                """
+                Checking if we are encountering another subentry in which case we skip to the next key.
+                """
                 if k in self.sub_entries:
+                    skip = False
+                    for se in self.sub_entries[k]:
+                        if self.sub_entries[k][se]:
+                            if self.deaccent_string(list(self.sub_entries[k][se].keys())[0]) != self.deaccent_string(list(self.sub_entries[k][se].keys())[0]):
+                                skip = True
+                                break
+                    if skip == True:
+                        continue
                     add_forms, add_syns = self.subentries_to_forms_and_synonyms(k, self.get_title())
+                    
                 typ = self.get_wiki_type(k)
                 if typ != '':
                     string.append('=== %s ===\n' % (typ))
@@ -648,18 +677,21 @@ class Entry():
                             string.append('\n# ')
                             string.append(self.get_forms(k))
                             if add_forms != []:
-                                string.append(add_forms)
+                                string.append(', ' + add_forms)
                             if tags:
                                 string.append(' ' + tags)
-                            string.append(' $')
-                        string.append('\n}}\n\n')                
+                            string.append(' ' + book)
+                        string.append('\n}}\n\n') 
+                elif add_forms:
+                    string.extend(['{{Облици|', '\n# ', add_forms, '\n}}\n\n'])
+                    add_forms = []
                     
                 if k in self.meanings:    
                     string.append('{{Значење|')
                     for sk in self.meanings[k]:
                         string.append('\n# ')
                         string.append(self.get_meanings(k, sk))
-                        string.append(' $')
+                        string.append(book)
                     string.append('\n}}\n\n')
                     
                 if k in self.examples:    
@@ -667,18 +699,21 @@ class Entry():
                     for sk in self.examples[k]:
                         string.append('\n# ')
                         string.append(''.join(self.get_examples(k, sk)))
-                        string.append(' $')
+                        string.append(book)
                     string.append('\n}}\n\n')
                     
                 if k in self.synonyms:    
                     string.append(self.get_synonyms(k, add_syns))
+                elif add_syns:
+                    string.extend(['{{Синоними|', '\n# ', add_syns, '\n}}\n\n'])
+                    add_syns = []
                     
                 if k in self.phrases:    
                     string.append('{{Изрази|\n')
                     for sk in self.phrases[k]:
                         string.append(self.get_phrases(k, sk))
-                        string.append(' $')
-                    string.append('}}\n\n')
+                        string.append(book)
+                    string.append('\n}}\n\n')
     #            print(string)
         """
         End of Wiktionary entry
@@ -729,6 +764,8 @@ class Entry():
                 
             if 'прел' in lst:
                 gen = 'прел.'
+            elif ' се' in self.title:
+                gen = 'повр.'
             else:
                 gen = 'непрел.'
             

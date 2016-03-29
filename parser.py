@@ -87,6 +87,10 @@ def main(argv):
             print ('*********************DICTIONARY ' + DICT_TITLE + '****************************\n')
     for source in SOURCE:
         print(source)
+        try:
+            book_no = re.findall('\d', source)[0]
+        except IndexError:
+            book_no = 1
         data = get_html(source)
         if isinstance(data, tuple):
             try:
@@ -106,8 +110,9 @@ def main(argv):
         
         all_dicts.update(dictionary)
         for d in dictionary:
+            dictionary[d].book_no = book_no
             if debug:
-                entry.debug()
+                dictionary[d].debug()
             
     for e in all_dicts:
         to_write[DICT_TITLE].update({e:all_dicts[e].json_ready()})
