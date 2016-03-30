@@ -75,5 +75,3 @@ def transliterate(string, to_latin = False):
             else:
                 new = new + s
     return new
-
-print(transliterate('бу́ћити', True))

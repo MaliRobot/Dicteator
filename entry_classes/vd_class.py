@@ -681,7 +681,7 @@ class Entry():
                             if add_forms != []:
                                 wiki['forms'].append(', ' + add_forms)
                             if tags:
-                                wiki['forms'].append(' ' + tags)
+                                wiki['forms'].append(tags)
                             wiki['forms'].append(' ' + book)
                 elif add_forms:
                     wiki['forms'].extend(['# ', add_forms])

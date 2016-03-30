@@ -72,17 +72,22 @@ def make_subentries_of_entry(entry, dictionary):
                         new_entry.origin = entry
                         dictionary[entry].children.append(title)
                         if k in dictionary[entry].forms:
-                            new_entry.forms = {k:dictionary[entry].forms[k]}
+                            if se in dictionary[entry].forms[k]:
+                                new_entry.forms = {k:{se:dictionary[entry].forms[k][se]}}
                         if k in dictionary[entry].type:
-                            new_entry.type = {k:dictionary[entry].type[k]}
+                            if se in dictionary[entry].type[k]:
+                                new_entry.type = {k:{se:dictionary[entry].type[k][se]}}
                         if k in dictionary[entry].examples:
-                            new_entry.examples = {k:dictionary[entry].examples[k]}
+                            if se in dictionary[entry].examples[k]:
+                                new_entry.examples = {k:{se:dictionary[entry].examples[k][se]}}
                         if k in dictionary[entry].meanings:
-                            new_entry.meanings = {k:dictionary[entry].meanings[k]}
+                            if se in dictionary[entry].meanings[k]:
+                                new_entry.meanings = {k:{se:dictionary[entry].meanings[k][se]}}
                         if k in dictionary[entry].sub_entries:
                             new_entry.sub_entries = {k:dictionary[entry].sub_entries[k]}
                         if k in dictionary[entry].phrases:
-                            new_entry.phrases = {k:dictionary[entry].phrases[k]}
+                            if se in dictionary[entry].phrases[k]:
+                                new_entry.phrases = {k:{se:dictionary[entry].phrases[k][se]}}
                         new_entry.keys = [k]
                         dictionary[title] = new_entry
                         i += 1
@@ -106,7 +111,7 @@ def expand_dictionary(dictionary):
     entries = list(dictionary.keys())
     for e in entries:
         dictionary = make_deaccented_entry(e, dictionary)
-#        dictionary = make_subentries_of_entry(e, dictionary)
+        dictionary = make_subentries_of_entry(e, dictionary)
     print('subentries', i)
     print(len(dictionary))
     return dictionary
