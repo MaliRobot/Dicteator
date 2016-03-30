@@ -10,6 +10,7 @@ Created on Tue Aug 11 17:16:06 2015
 import json, re, os
 from tools.sr_lat2cyr2lat import *
 from collections import Counter
+from sinonimi_class import syn_transliterate
 
 SHORT = 'parsed/sinonimi_cyr_short.json'
 FULL = 'parsed/sinonimi_cyr.json'
@@ -126,7 +127,7 @@ class Entry():
     """
     def __init__(self, name, lat = False):
         if lat == True:
-            self.name = transliterate(name, lat)
+            self.name = syn_transliterate(name, lat)
             self.script = 'lat'
         else:
             self.name = name
@@ -303,9 +304,9 @@ def format_type(lst, string):
         formatted.append(''.join(gender))
     elif string == 'Глагол':        
         asp = ''.join([x for x in lst if x in ["['svrš.']", "['nesvrš.']"]])
-        asp = transliterate(re.sub("[\[\]'\,]", "", asp))
+        asp = syn_transliterate(re.sub("[\[\]'\,]", "", asp))
         gen = ''.join([x for x in lst if x in ["['prel.']", "['neprel.']"]])
-        gen = transliterate(re.sub("[\[\]'\,]", "", gen))
+        gen = syn_transliterate(re.sub("[\[\]'\,]", "", gen))
         if asp:
             formatted.append('|вид=' + asp)
         if gen:
@@ -356,7 +357,7 @@ def format_syn_asc(word_list, lat = False):
         if s[-1].endswith('.') and s[-1] in LINKS.keys() and flip[s[-1]] == False:
             flip[s[-1]] = True
             string.append(LINKS[s[-1]] + ' ') 
-        string.append(' [[' + ' '.join([transliterate(x, lat) for x in s if x.endswith('.') == False]) + ']]')
+        string.append(' [[' + ' '.join([syn_transliterate(x, lat) for x in s if x.endswith('.') == False]) + ']]')
         for i in range(len(s)):
             if s[i].endswith('.'):
                 string.append(' [['+s[i]+']]')

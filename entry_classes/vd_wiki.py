@@ -11,6 +11,7 @@ import os, re
 from collections import Counter
 from entry_classes.vd_class import *
 from copy import deepcopy
+from tools.sr_lat2cyr2lat import *
 
 i = 0
         
@@ -113,4 +114,6 @@ def expand_dictionary(dictionary):
 def concat_entry(strings):
 #    print(strings)
     final = ''.join(strings)
+#    final = transliterate(final, True)
+#    print('sss', final, 'ddd')
     return final

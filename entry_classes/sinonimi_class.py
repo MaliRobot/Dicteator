@@ -27,7 +27,7 @@ class Entry:
         if trans == None:
             return self.title
         elif trans == 'cyr':
-            return transliterate(self.title)
+            return syn_transliterate(self.title)
     def get_type(self):
         return self.type
     def get_meaning(self, trans = None):
@@ -39,18 +39,18 @@ class Entry:
                     for k in self.meaning[m]:
                         for n in self.meaning[m][k]:
                             if isinstance(self.meaning[m][k][n], str):
-                                self.meaning[m][k][n] = transliterate(self.meaning[m][k][n])
+                                self.meaning[m][k][n] = syn_transliterate(self.meaning[m][k][n])
                             elif isinstance(self.meaning[m][k][n], dict): 
                                 for key in self.meaning[m][k][n].keys():
                                     if isinstance(self.meaning[m][k][n][key], list):
                                         for i in range(len(self.meaning[m][k][n][key])):
-                                            self.meaning[m][k][n][key][i] = transliterate(self.meaning[m][k][n][key][i])
+                                            self.meaning[m][k][n][key][i] = syn_transliterate(self.meaning[m][k][n][key][i])
                                     elif isinstance(self.meaning[m][k][n][key], str):
-                                        self.meaning[m][k][n][key] = transliterate(self.meaning[m][k][n][key])
+                                        self.meaning[m][k][n][key] = syn_transliterate(self.meaning[m][k][n][key])
                             elif isinstance(self.meaning[m][k][n], list):
                                 lst = []
                                 for w in self.meaning[m][k][n]:
-                                    lst.append(transliterate(w))
+                                    lst.append(syn_transliterate(w))
                                 self.meaning[m][k][n] = lst
             return self.meaning
     def get_reference(self):
@@ -113,6 +113,49 @@ class Entry:
         return self.__class__.__name__, self.title, self.type, self.meaning
     def json_ready(self, trans):
         return {self.get_title(trans): {str(self.type) : [self.get_meaning(trans), str(self.get_reference())]}}
+        
+def syn_transliterate(string, to_latin = False):
+    if to_latin == False:
+        script = AZBUKA
+    else:
+        script = ABECEDA
+    skip = False
+    latin = False
+    new = ''   
+    for i, s in enumerate(string):
+        if skip == True:
+            skip = False
+            continue  
+        elif s == '#':
+            latin = True
+            continue
+        elif latin == True:
+            new = new + s
+            latin == False
+        elif s.isalpha() == False:
+            new = new + s
+        else:
+            low_s = s.lower()
+            if low_s == 'n' or low_s == 'd' or low_s == 'l': 
+                try:
+                    n = string[i+1]
+                    low_n = n.lower()
+                    if (low_s == 'n' and low_n == 'j')\
+                    or (low_s == 'd' and low_n == 'ž')\
+                    or (low_s == 'l' and low_n == 'j'):
+                        if low_n == 'ž':
+                            n = u'ž'
+                        s = s + n
+                        skip = True                        
+                except:
+                    pass
+            if s in script.keys():
+                new = new + script[s]
+            elif s == '#':
+                latin == True
+            else:
+                new = new + s
+    return new        
         
 def switch(split_means):
     """

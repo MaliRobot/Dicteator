@@ -39,18 +39,18 @@ def transliterate(string, to_latin = False):
     else:
         script = ABECEDA
     skip = False
-    latin = False
+#    latin = False
     new = ''   
     for i, s in enumerate(string):
         if skip == True:
             skip = False
             continue  
-        elif s == '#':
-            latin = True
-            continue
-        elif latin == True:
-            new = new + s
-            latin == False
+#        elif s == '#':
+#            latin = True
+#            continue
+#        elif latin == True:
+#            new = new + s
+#            latin == False
         elif s.isalpha() == False:
             new = new + s
         else:
@@ -70,8 +70,10 @@ def transliterate(string, to_latin = False):
                     pass
             if s in script.keys():
                 new = new + script[s]
-            elif s == '#':
-                latin == True
+#            elif s == '#':
+#                latin == True
             else:
                 new = new + s
     return new
+
+print(transliterate('бу́ћити', True))
