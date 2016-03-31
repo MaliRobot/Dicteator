@@ -68,6 +68,10 @@ def make_subentries_of_entry(entry, dictionary):
                 for se in dictionary[entry].sub_entries[k]:
                     title = list(dictionary[entry].sub_entries[k][se].keys())[0]
                     if title not in dictionary:
+                        if '˜' in title:
+                            title = title.replace('˜', dictionary[entry].title)
+                        if title.endswith(' d'):
+                            title = title[:-2]
                         new_entry = Entry(title)
                         new_entry.origin = entry
                         dictionary[entry].children.append(title)
@@ -84,7 +88,10 @@ def make_subentries_of_entry(entry, dictionary):
                             if se in dictionary[entry].meanings[k]:
                                 new_entry.meanings = {k:{se:dictionary[entry].meanings[k][se]}}
                         if k in dictionary[entry].sub_entries:
-                            new_entry.sub_entries = {k:dictionary[entry].sub_entries[k]}
+                            new_entry.sub_entries = {k:{}}
+                            for se2 in dictionary[entry].sub_entries[k]:
+                                if dictionary[entry].sub_entries[k][se2] != dictionary[entry].title or se != se2:
+                                    new_entry.sub_entries[k].update({se:dictionary[entry].sub_entries[k][se2]})
                         if k in dictionary[entry].phrases:
                             if se in dictionary[entry].phrases[k]:
                                 new_entry.phrases = {k:{se:dictionary[entry].phrases[k][se]}}
@@ -110,8 +117,9 @@ def expand_dictionary(dictionary):
     print(len(dictionary))
     entries = list(dictionary.keys())
     for e in entries:
-        dictionary = make_deaccented_entry(e, dictionary)
         dictionary = make_subentries_of_entry(e, dictionary)
+    for e in entries:
+        dictionary = make_deaccented_entry(e, dictionary)
     print('subentries', i)
     print(len(dictionary))
     return dictionary

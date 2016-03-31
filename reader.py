@@ -53,7 +53,7 @@ def make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat
 #        entry = Entry(entry_name, lat)
         entry = dictionary[s]
 
-        if len(entry.keys) == 1: # delete this after testing
+        if len(entry.keys) > 1: # delete this after testing
             if entry_name in duplicates:
                 entry.not_unique()
                 if entry_name in entries:
