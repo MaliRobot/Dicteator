@@ -257,6 +257,15 @@ class Entry():
                     continue
                 else:
                     forms.append(w)
+        if self.original_title != None:
+            if self.original_title not in forms:
+                forms.append(self.original_title)
+        if self.standard_title != None:
+            if self.standard_title not in forms:
+                forms.append(self.standard_title)
+        forms = [x for x in forms if x != self.title]
+        forms = ['[[' + x + ']]' for x in forms]
+#        print(forms)
         forms = ', '.join(forms)
         cats = ' '.join(cats)
         return forms.strip(), cats.strip() 
@@ -282,11 +291,8 @@ class Entry():
                     continue
                 if '˜' in w_mod:
                     w_mod = w_mod.replace('˜', title)
-#                w_mod = w_mod.replace(' d', '')
-#                w_mod = re.sub('\d', '', w_mod)
                 w_mod = w_mod.strip()
                 if self.deaccent_string(self.title) not in self.deaccent_string(w_mod) and ' се' not in self.title:
-
                     w_mod = w_mod.split(', ')
                     w_mod = [x for x in w_mod if not w.startswith('-')]
                     w_mod = [x for x in w_mod if x != '']
@@ -319,7 +325,7 @@ class Entry():
                         derived.append(w_mod)
                 else:
                     synonyms.append(w_mod)
-
+        print(forms)
         return ', '.join(forms), ', '.join(synonyms), ', '.join(derived)
             
     def deaccent_string(self, string):
@@ -349,9 +355,11 @@ class Entry():
                         refs.append(self.process_bibliographical(ref))
                     elif ref.startswith('('):
                         refs.append(self.process_locations(ref))
-            meanings.append('. '.join([mn, ' '.join(refs)]))
+                        
+            meanings.extend(['# ', '. '.join([mn, ' '.join(refs)]), BOOK_NEW, '\n'])
+#            print(meanings)
         if meanings != []:
-            return '\n# '.join(meanings)
+            return ''.join(meanings)
         return ''
         
     def get_examples(self, k, sk):
@@ -369,7 +377,7 @@ class Entry():
                         refs.append(self.process_bibliographical(ref))
                     elif ref.startswith('('):
                         refs.append(self.process_locations(ref))
-            examples.append(' '.join([ex, ' '.join(refs)]))
+            examples.append(' '.join([ex, ' '.join(refs), BOOK_NEW]))
         return '\n# '.join(examples)
         
     def get_synonyms(self, k):
@@ -424,6 +432,7 @@ class Entry():
                 final.append(loc)
             if bib != None:
                 final.append(bib)
+            final.append(BOOK_NEW)
             final.append('\n')
 
         return ' '.join(final)
@@ -697,35 +706,31 @@ class Entry():
                             wiki['tags'].append(cats)
                         if add_forms != []:
                             wiki['forms'].append(', ' + add_forms)
-                        wiki['forms'].append(' ' + book)
+                        wiki['forms'].append(' ' + book + '\n')
                 elif add_forms:
-                    wiki['forms'].extend(['# ', add_forms])
+                    wiki['forms'].extend(['# ', add_forms, '\n'])
                     add_forms = []
                     
                 if k in self.meanings:    
                     for sk in self.meanings[k]:
                         meanings = self.get_meanings(k, sk)
                         if meanings != []:
-                            wiki['meanings'].append('# ')
                             wiki['meanings'].append(self.get_meanings(k, sk))
-                            wiki['meanings'].append(book)
                     
                 if k in self.examples:    
                     for sk in self.examples[k]:
                         wiki['examples'].append('# ')
                         wiki['examples'].append(''.join(self.get_examples(k, sk)))
-                        wiki['examples'].append(book)
                     
                 if k in self.synonyms:    
                     wiki['synonyms'].append(self.get_synonyms(k))
                 if add_syns:
-                    wiki['synonyms'].extend(['# ', add_syns, ' ', BOOK_NEW])
+                    wiki['synonyms'].append(''.join(['# ', add_syns, ' ', BOOK_NEW]))
                     add_syns = []
                     
                 if k in self.phrases:    
                     for sk in self.phrases[k]:
                         wiki['phrases'].append(self.get_phrases(k, sk))
-                        wiki['phrases'].append(book)
                         
             wiki_list = self.combine_wiki_parts(wiki_list, wiki)
 
@@ -740,25 +745,25 @@ class Entry():
     def combine_wiki_parts(self, strings, wiki):
         if wiki['tags'] != []:
             tags = ''.join(wiki['tags'])
-            strings.extend(['{{Категорије|\n', tags, ' \n}}\n\n'])
+            strings.extend(['{{Категорије|\n', tags, '\n}}\n\n'])
         if wiki['forms'] != []:
             forms = ''.join(wiki['forms'])
-            strings.extend(['{{Облици|\n', forms, ' \n}}\n\n'])
+            strings.extend(['{{Облици|\n', forms, '}}\n\n'])
         if wiki['meanings'] != []:
             meanings = ''.join(wiki['meanings'])
-            strings.extend(['{{Значења|\n', meanings, ' \n}}\n\n'])
+            strings.extend(['{{Значење|\n', meanings, '}}\n\n'])
         if wiki['examples'] != []:
             examples = ''.join(wiki['examples'])
-            strings.extend(['{{Примери|\n', examples, ' \n}}\n\n'])
+            strings.extend(['{{Примери|\n', examples, '\n}}\n\n'])
         if wiki['derived'] != []:
             derived = '\n# '.join(wiki['derived'])
-            strings.extend(['{{Изведене речи|\n# ', derived, ' \n}}\n\n'])
+            strings.extend(['{{Изведене речи|\n# ', derived, '\n}}\n\n'])
         if wiki['synonyms'] != []:
-            synonyms = ''.join(wiki['synonyms'])
-            strings.extend(['{{Синоними|\n', synonyms, ' \n}}\n\n'])
+            synonyms = '\n'.join(wiki['synonyms'])
+            strings.extend(['{{Синоними|\n', synonyms, '\n}}\n\n'])
         if wiki['phrases'] != []:
             phrases = ''.join(wiki['phrases'])
-            strings.extend(['{{Изрази|\n', phrases, ' \n}}\n\n'])
+            strings.extend(['{{Изрази|\n', phrases, '\n}}\n\n'])
         return strings
 
     def format_type(self, lst, string):

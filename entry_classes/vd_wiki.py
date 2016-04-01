@@ -57,6 +57,11 @@ def make_deaccented_entry(entry, dictionary):
                 dictionary.update({title:new_entry})
     return dictionary
     
+def remove_sufix(string):
+    string = string.split(' ')
+    string = [x for x in string if not x.startswith('-')]
+    return ' '.join(string)
+    
 def make_subentries_of_entry(entry, dictionary):
     """
     
@@ -102,7 +107,7 @@ def make_subentries_of_entry(entry, dictionary):
 
                         if new_entry.standard_title != None and new_entry.standard_title not in dictionary:
                             one_more_entry = new_entry
-                            one_more_entry.title = new_entry.standard_title
+                            one_more_entry.title = remove_sufix(new_entry.standard_title)
                             one_more_entry.origin = entry
                             new_entry.children.append(one_more_entry.title)
                             dictionary[one_more_entry.title] = one_more_entry
