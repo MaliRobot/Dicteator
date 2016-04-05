@@ -77,6 +77,7 @@ def make_subentries_of_entry(entry, dictionary):
                             title = title.replace('˜', dictionary[entry].title)
                         if title.endswith(' d'):
                             title = title[:-2]
+#                        print(title)
                         new_entry = Entry(title)
                         new_entry.origin = entry
                         dictionary[entry].children.append(title)

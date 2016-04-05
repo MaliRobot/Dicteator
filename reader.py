@@ -47,7 +47,7 @@ def make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat
         if debug:        
             names.append(" ".join([x for x in dictionary[s].keys()]))
         entry_name = re.sub(r'\([^)]*\)', '', s).strip()
-        entry_name = re.sub(r'\s\{\d}', '', s).strip()
+        entry_name = re.sub(r'[\s]{0,1}\{\d\}', '', s).strip()
     
 #        sinonimi
 #        entry = Entry(entry_name, lat)
@@ -79,7 +79,7 @@ def make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat
     To print the entries to a text file.
     """
     if to_text:
-        out = codecs.open('out/test0.txt', 'w', encoding = 'utf8')
+        out = codecs.open('out/test1.txt', 'w', encoding = 'utf8')
         for k in entries:
             out.write('\n{{-start-}}\n')
             out.write('\'\'\'%s\'\'\'\n' % (transliterate(k, lat)))

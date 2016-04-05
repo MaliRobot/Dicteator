@@ -190,7 +190,8 @@ class Entry():
             self.standard_title = temp
             
     def set_latin_title(self):
-        self.latin_title = transliterate(self.title, True)            
+        title = re.sub('\[\s]{0,1}\{\d\}', '', self.title)
+        self.latin_title = transliterate(title, True)            
             
     def not_unique(self):
         self.unique = False
@@ -235,14 +236,8 @@ class Entry():
                     forms[-1] = forms[-1] + ' ' + w
                 if '˜' in w:
                     w = w.replace('˜', self.title)
-                if w.startswith('само у'):
-                    if k == (0, 0):
-                        w = self.title + w
-                    elif k in self.sub_entries:
-                        if sk in self.sub_entries[k]:
-                            w = list(self.sub_entries[k][sk].keys())[0] + w
-                    forms.append(w)
-                    continue
+                if w.startswith('само') or w.startswith('‘'):
+                    return ', '.join(forms), ''
                 w = re.sub('\(.*?\)', '', w)
                 w = re.sub('\[.*?\]', '', w)
                 w = re.sub('\(.*?', '', w)
@@ -257,6 +252,11 @@ class Entry():
                     continue
                 else:
                     forms.append(w)
+        forms = list(set(forms))
+        forms = [x for x in forms if x not in ['.', '', ',', 'се', ' ', 'у', ':', ', ']]
+        forms = [x.strip('.,;') for x in forms]
+        forms, cats = self.split_find(forms, cats)                 
+                    
         if self.original_title != None:
             if self.original_title not in forms:
                 forms.append(self.original_title)
@@ -264,11 +264,26 @@ class Entry():
             if self.standard_title not in forms:
                 forms.append(self.standard_title)
         forms = [x for x in forms if x != self.title]
-        forms = ['[[' + x + ']]' for x in forms]
-#        print(forms)
-        forms = ', '.join(forms)
+
+        forms = ['[[' + x + ']]' for x in forms if x != ' ']
+        print('XXXXXXX', forms)
+        forms = list(set(forms))
+
+        if forms != []:    
+            forms = ', '.join(forms)
+        else:
+            forms = ''
+#        print('asasasssss', forms)
         cats = ' '.join(cats)
         return forms.strip(), cats.strip() 
+        
+    def split_find(self, forms, cats):
+        for f in range(len(forms)):
+            for sf in forms[f].split():
+                if sf in CATEGORIES:
+                    cats.append(CATEGORIES[sf])
+                    forms[f] = forms[f].replace(sf, '')
+        return forms, cats
         
     def get_type(self):
         return self.type
@@ -280,7 +295,6 @@ class Entry():
         its synonyms.
         """
         forms = []
-        synonyms = []
         derived = []
         for sk in self.sub_entries[k]:
             for w in self.sub_entries[k][sk]:
@@ -297,7 +311,7 @@ class Entry():
                     w_mod = [x for x in w_mod if not w.startswith('-')]
                     w_mod = [x for x in w_mod if x != '']
                     w_mod = [x.strip(', ') for x in w_mod]
-                
+                    
                     w_mod = ']] \n# [['.join(w_mod)
                 w_mod = '[[' + w_mod + ']]'
                 loc = None
@@ -323,10 +337,10 @@ class Entry():
                     w_mod = w_mod.replace(' d', '')
                     if self.deaccent_string(w_mod[2:-2]) != self.deaccent_string(self.title):
                         derived.append(w_mod)
-                else:
-                    synonyms.append(w_mod)
+
+        forms = list(set(forms))
         print(forms)
-        return ', '.join(forms), ', '.join(synonyms), ', '.join(derived)
+        return ', '.join(forms), ', '.join(derived)
             
     def deaccent_string(self, string):
         """
@@ -389,9 +403,11 @@ class Entry():
                 syns = [x for x in syns if x != '']
                 syns = [x.split()[0] for x in syns]
                 syns = [x.strip(', ') for x in syns if x != '']
+                syns = [re.sub('{\d}', '', x) for x in syns]
+                syns = list(set(syns))
                 syns = ['[[' + x +']]' for x in syns if x != '']
 
-                final.append('# ')
+                final.append('#')
                 final.append(', '.join(syns))
                 for i in range(2, len(syn_lst)):
                     if syn_lst[i] != None:
@@ -642,7 +658,6 @@ class Entry():
         """
         wiki_list = []
         add_forms = []
-        add_syns = []
         book = BOOK_NEW
         wiki = {'tags':[], 'forms':[], 'meanings':[], 'examples': [], 'synonyms':[], 'phrases': [], 'derived':[]}
         self.set_latin_title()
@@ -679,9 +694,9 @@ class Entry():
                                 break
                     if skip == True:
                         continue
-                    add_forms, add_syns, add_der = self.subentries_to_forms_and_synonyms(k, self.get_title())
+                    add_forms, add_der = self.subentries_to_forms_and_synonyms(k, self.get_title())
                     if add_der:
-                        wiki['derived'].append(add_der)
+                        wiki['derived'].append(add_der + ' ' + BOOK_NEW)
                     
                 typ = self.get_wiki_type(k)
                 if typ != '':
@@ -698,17 +713,23 @@ class Entry():
                     
                 if k in self.forms:
                     for sk in self.forms[k]:
-                        wiki['forms'].append('# ')
                         forms, cats = self.get_forms(k)
-                        if forms != '' or forms != ',':
+                        if forms != '' and forms != ',' and forms != []:
+                            wiki['forms'].append('# ')
                             wiki['forms'].append(forms)
+                            wiki['forms'].append(' ' + book + '\n')
                         if cats:
                             wiki['tags'].append(cats)
-                        if add_forms != []:
-                            wiki['forms'].append(', ' + add_forms)
-                        wiki['forms'].append(' ' + book + '\n')
+                        if add_forms != [] and add_forms != '':
+                            print(add_forms, 'qqqqqqqq')
+                            wiki['forms'].append('# ' + add_forms)
+                            wiki['forms'].append(' ' + book + '\n')
+                    
                 elif add_forms:
-                    wiki['forms'].extend(['# ', add_forms, '\n'])
+                    if add_forms != []:
+                        af = '# ' + ' ' + add_forms + ' ' + BOOK_NEW + '\n'
+                        if af not in wiki['forms']:
+                            wiki['forms'].append(af)
                     add_forms = []
                     
                 if k in self.meanings:    
@@ -724,16 +745,13 @@ class Entry():
                     
                 if k in self.synonyms:    
                     wiki['synonyms'].append(self.get_synonyms(k))
-                if add_syns:
-                    wiki['synonyms'].append(''.join(['# ', add_syns, ' ', BOOK_NEW]))
-                    add_syns = []
                     
                 if k in self.phrases:    
                     for sk in self.phrases[k]:
                         wiki['phrases'].append(self.get_phrases(k, sk))
                         
             wiki_list = self.combine_wiki_parts(wiki_list, wiki)
-
+        wiki['forms'] = list(set(wiki['forms']))
         """
         End of Wiktionary entry
         """
@@ -763,7 +781,7 @@ class Entry():
             strings.extend(['{{Синоними|\n', synonyms, '\n}}\n\n'])
         if wiki['phrases'] != []:
             phrases = ''.join(wiki['phrases'])
-            strings.extend(['{{Изрази|\n', phrases, '\n}}\n\n'])
+            strings.extend(['{{Изрази|\n', phrases, '}}\n\n'])
         return strings
 
     def format_type(self, lst, string):
