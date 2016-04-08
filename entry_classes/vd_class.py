@@ -266,7 +266,7 @@ class Entry():
         forms = [x for x in forms if x != self.title]
 
         forms = ['[[' + x + ']]' for x in forms if x != ' ']
-        print('XXXXXXX', forms)
+#        print('XXXXXXX', forms)
         forms = list(set(forms))
 
         if forms != []:    
@@ -339,7 +339,7 @@ class Entry():
                         derived.append(w_mod)
 
         forms = list(set(forms))
-        print(forms)
+#        print(forms)
         return ', '.join(forms), ', '.join(derived)
             
     def deaccent_string(self, string):
@@ -721,7 +721,7 @@ class Entry():
                         if cats:
                             wiki['tags'].append(cats)
                         if add_forms != [] and add_forms != '':
-                            print(add_forms, 'qqqqqqqq')
+#                            print(add_forms, 'qqqqqqqq')
                             wiki['forms'].append('# ' + add_forms)
                             wiki['forms'].append(' ' + book + '\n')
                     

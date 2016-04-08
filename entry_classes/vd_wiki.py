@@ -62,6 +62,33 @@ def remove_sufix(string):
     string = [x for x in string if not x.startswith('-')]
     return ' '.join(string)
     
+def clean_title(title, dictionary, entry):
+    if '˜' in title:
+        title = title.replace('˜', dictionary[entry].title)
+    title = re.sub('{\d}', '', title)
+    title = re.sub(' \d', '', title)
+    title = re.sub('\s\w$', '', title)
+#    title = re.sub('-\w+', '', title)
+#    title = re.sub('-\w', '', title)
+    if len(title.split()) > 2 and title.split()[-1] == 'се':
+        title = ' '.join(title.split()[:-2])
+    if len(title.split('[')) > 1:
+        title = title.split(' [')[0]
+    if len(title.split(', ')) > 1:
+        title = title.split(', ')[0]
+    if len(title.split(' -')) > 1:
+        title = title.split(' -')[0]
+    if len(title.split()) > 1:
+        title = title.split()
+        if title[0][:2] == title[1][:2]:
+            title = title[0]
+        else:
+            title = ' '.join(title)
+    title = title.replace('[', '')
+    title = title.replace(']', '')
+    title = re.sub('\d', '', title)
+    return title.strip()
+    
 def make_subentries_of_entry(entry, dictionary):
     """
     
@@ -72,12 +99,9 @@ def make_subentries_of_entry(entry, dictionary):
             try:
                 for se in dictionary[entry].sub_entries[k]:
                     title = list(dictionary[entry].sub_entries[k][se].keys())[0]
-                    if title not in dictionary:
-                        if '˜' in title:
-                            title = title.replace('˜', dictionary[entry].title)
-                        if title.endswith(' d'):
-                            title = title[:-2]
-#                        print(title)
+                    title = clean_title(title, dictionary, entry)
+                    if title not in dictionary and title != '':
+                        print(title)
                         new_entry = Entry(title)
                         new_entry.origin = entry
                         dictionary[entry].children.append(title)
@@ -105,10 +129,14 @@ def make_subentries_of_entry(entry, dictionary):
                         dictionary[title] = new_entry
                         i += 1
                         new_entry.set_standard_title()
+                        print(new_entry.latin_title)
 
                         if new_entry.standard_title != None and new_entry.standard_title not in dictionary:
                             one_more_entry = new_entry
-                            one_more_entry.title = remove_sufix(new_entry.standard_title)
+                            one_more_entry.title = clean_title(new_entry.standard_title, dictionary, one_more_entry)
+                            one_more_entry.standard_title = None
+                            one_more_entry.latin_title = transliterate(one_more_entry.title, True)
+                            print(one_more_entry.title, one_more_entry.latin_title)
                             one_more_entry.origin = entry
                             new_entry.children.append(one_more_entry.title)
                             dictionary[one_more_entry.title] = one_more_entry
