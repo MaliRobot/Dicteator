@@ -10,9 +10,11 @@ import sys
 from getopt import getopt
 from tools.sr_lat2cyr2lat import *
 from collections import OrderedDict, Counter
+from entry_classes.ornitology_class import *
+from entry_classes.ornitology_wiki import *
 #from entry_classes.sinonimi_wiki import *
-from entry_classes.vd_class import *
-from entry_classes.vd_wiki import *
+#from entry_classes.vd_class import *
+#from entry_classes.vd_wiki import *
 
 def load_json(source):
     """
@@ -20,7 +22,7 @@ def load_json(source):
     """
     file = open(source, 'r', encoding="utf8")
     dictionary_json = json.load(file, object_pairs_hook=OrderedDict)
-    dictionary_json = dictionary_json[next(iter(dictionary.keys()))]
+    dictionary_json = dictionary_json[next(iter(dictionary_json.keys()))]
     return dictionary_json
                     
 def load_pickle(source):
