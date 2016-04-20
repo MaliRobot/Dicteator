@@ -33,8 +33,8 @@ class Entry():
     def set_species(self, migration, latin, serbian):
         self.num_species += 1
         self.species[self.num_species] = [migration, latin, serbian]
-    def json_ready(self, script):
-        return {self.genus : [self.discover, self.latin, self.serbian, self.species]}
+    def json_ready(self):
+        return {self.genus : {'discoverer': self.discover, 'latin name': self.latin, 'serbian name' : self.serbian, 'species' :     self.species}}
         
 def process_discover(discover):
     '''
@@ -52,7 +52,7 @@ def process_discover(discover):
         discover[-1] = discover[-1].strip()   
 
     discover = ' '.join(discover)
-    print('dis', discover)
+#    print('dis', discover)
     return discover
     
 def process_latin(latin):
@@ -133,7 +133,7 @@ def get_genus(gen_list):
 
     latin = process_latin(latin)
     serbian = process_serbian(serbian)
-    print(discover)
+#    print(discover)
     discover = discover.replace(name[0], '').strip()    
     
     entry.set_discover(discover)
@@ -153,7 +153,7 @@ def get_species(species, entry):
         text = ' '.join([x[0] for x in s])
         text = text.strip()
         migration = text[0]
-        
+
         latin.append(re.findall('[A-Z].*?\(', text[1:])[0])
         text = text[1:].replace(latin[0], '')
         latin.append(re.findall('.*?\)', text)[0])
@@ -203,10 +203,12 @@ def get_entries(para):
     '''
     idx = []
     species = []
+    print(para, '\n')
     for i,p in enumerate(para):
         for m in MIGRATION:
             if m in p[0]:
                 idx.append(i)
+    print(idx)
     if len(idx) == 0:
         genus = para
     elif len(idx) == 1:
@@ -217,8 +219,13 @@ def get_entries(para):
         species = [para[idx[0]:idx[1]], para[idx[1]:]]
     else:
         genus = para[:idx[0]]
-        for i in range(1, len(idx)-1):
-            species.append(para[idx[i]:idx[i+1]])
+        for i in range(len(idx)):
+            if i == len(idx) - 1:
+                species.append(para[idx[i]:])
+            elif i == 0:
+                species.append(para[idx[0]:idx[1]])
+            else:
+                species.append(para[idx[i]:idx[i+1]])
     entry = get_genus(genus)
     entry = get_species(species, entry)
     return {entry.genus : entry}
@@ -237,6 +244,7 @@ def make_entries(contents):
     for p in contents:
         para = []
         for s in p:
+#            print(s, '\n')
             if not isinstance(s, NavigableString) and s.get_text() != None:
                 try:
                     if 'bold' in s['style']:
@@ -248,7 +256,7 @@ def make_entries(contents):
                 except KeyError:
                         para.append((s.get_text(), 2))
             else:
-                if s!= '' or s != ' ':
+                if s != '' or s != ' ':
                     para.append((s, 2))
 
         para = [x for x in para if x[0] != '\xa0']

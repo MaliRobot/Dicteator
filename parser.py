@@ -10,9 +10,9 @@ Created on Thu Apr 16 15:09:09 2015
 # recnik sinonima
 #from entry_classes.sinonimi_class import *
 # recnik vojvodjanskih 
-from entry_classes.vd_class import *
+#from entry_classes.vd_class import *
 # ornitoloski recnik
-#from entry_classes.ornitology_class import *
+from entry_classes.ornitology_class import *
 from collections import Counter, OrderedDict
 from bs4 import BeautifulSoup, NavigableString
 import os, json, pickle
@@ -22,7 +22,7 @@ from sys import argv
 SOURCE = [x for x in os.listdir('data')]
 print ("Reading file(s): ", SOURCE)
 
-DICT_TITLE = 'VD'
+DICT_TITLE = 'ornitoloski_recnik'
 
 
 def get_html(source):
