@@ -203,12 +203,12 @@ def get_entries(para):
     '''
     idx = []
     species = []
-    print(para, '\n')
+#    print(para, '\n')
     for i,p in enumerate(para):
         for m in MIGRATION:
             if m in p[0]:
                 idx.append(i)
-    print(idx)
+#    print(idx)
     if len(idx) == 0:
         genus = para
     elif len(idx) == 1:

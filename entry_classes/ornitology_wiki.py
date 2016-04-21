@@ -196,33 +196,129 @@ REFERENCES = {
 "Џај. А." : "<ref name='Анто Џаја, Ружевац нестао заувек, Зов, бр. 15'>Анто Џаја, Ружевац нестао заувек, Зов, бр. 15, Борба, Београд 1984, 10.</ref>",
 "Шев. А." : "<ref name='Александар Шевић, Извештај о раду, Војвођански ловац, бр. 23–24'>Александар Шевић, Извештај о раду, Војвођански ловац, бр. 23–24, Нови Сад 1948, 311–323.</ref>"}
 
-BOOK = 'Дејан Милорадов – Слободан Пузовић – Васа Павковић – Јавор Рашајски, Орнитолошки речник, Имена птица, Матица српска, Нови Сад.'
+BOOK = '<ref name="Орнитолошки речник, Имена птица, Матица српска">Дејан Милорадов – Слободан Пузовић – Васа Павковић – Јавор Рашајски, Орнитолошки речник, Имена птица, Матица српска, Нови Сад.</ref>'
 
 class Entry():
     def __init__(self, name):
         self.name = name
+        self.script = 'cyr'
+        self.gender = None
+        self.language = None
         self.synonyms = []
+    def set_gender(self):
+        if self.name.endswith('а'):
+            self.gender = 'ж'
+        else:
+            self.gender = 'м'
         
 class Latin_genus(Entry):
     def __init__(self, name):
+        Entry.__init__(self, name)
         self.hyponyms = []
+    def to_wiki(self, begin = False, end = False):
+        string = []
+        if begin:
+            if self.script == 'lat':
+                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (self.name, self.original_name))
+            else:
+                string.append('== %s ([[Викиречник:Српски|српски]]) ==\n\n' % (self.name))
+                
+        if end:
+            string.append('== Референце ==\n{{reflist}}\n\n== Напомене ==\n{{reflist|group="н"}}')
+        return string
         
 class Serbian_genus(Entry):
     def __init__(self, name):
-        self.latin_names = None
+        Entry.__init__(self, name)
+        self.latin_name = None
         self.hyponyms = []
+    def to_wiki(self, begin = False, end = False):
+        string = []
+        if begin:
+            if self.script == 'lat':
+                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (transliterate(self.name, True), self.name))
+            else:
+                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Latinica|lat.]] [[%s]])) ==\n\n' % (self.name, transliterate(self.name, True)))
+                
+        string.append('=== Именица ===\n') 
+        gender = self.gender
+        string.append('{{српски-именица|род=%s}}\n\n' % gender)
+                
+        string.append('{{Значење|\n')
+        string.append('# Род птица (лат.) ' + self.latin_name + ' ' + BOOK + '\n')
+        string.append('}}\n\n')
+        
+        if self.synonyms != []:
+            string.append('{{Синоними|\n')
+            string.append(self.synonyms)
+            string.append('}}\n\n')
+            
+        if self.hyponyms != []:
+            string.append('{{Хипоними|\n')
+            for hypo in self.hyponyms:
+                string.append(hypo)
+            string.append('}}\n\n')
+            
+        if end:
+            string.append('== Референце ==\n{{reflist}}\n\n== Напомене ==\n{{reflist|group="н"}}')
+        return string
     
 class Latin_species(Entry):
     def __init__(self, name):
+        Entry.__init__(self, name)
         self.srb_genus = None
         self.lat_genus = None
         self.hyperonyms = []
+    def to_wiki(self, begin = False, end = False):
+        string = []
+        if begin:
+            if self.script == 'lat':
+                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (self.name, self.original_name))
+            else:
+                string.append('== %s ([[Викиречник:Српски|српски]]) ==\n\n' % (self.name))
+        
+        if end:
+            string.append('== Референце ==\n{{reflist}}\n\n== Напомене ==\n{{reflist|group="н"}}')
+        return string
         
 class Serbian_species(Entry):
     def __init__(self, name):
+        Entry.__init__(self, name)
         self.srb_genus = None
         self.lat_genus = None
         self.hyperonyms = []
+    def to_wiki(self, begin = False, end = False):
+        string = []
+        if begin:
+            if self.script == 'lat':
+                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Ћирилица|ћир.]] [[%s]]) ==\n\n' % (transliterate(self.name, True), self.name))
+            else:
+                string.append('== %s ([[Викиречник:Српски|српски]], [[Викиречник:Latinica|lat.]] [[%s]])) ==\n\n' % (self.name, transliterate(self.name, True)))
+                
+        string.append('=== Именица ===\n') 
+        gender = self.gender
+        string.append('{{српски-именица|род=%s}}\n\n' % gender)
+                
+        string.append('{{Значење|\n')
+        if self.srb_genus != None:
+            string.append('# Врста птице из рода ' + self.srb_genus + ' (лат. ' + self.lat_genus + ') ' + BOOK + '\n')
+        else:
+            string.append('# Врста птице из рода (лат.) ' + self.lat_genus + BOOK + '\n')
+        string.append('}}\n\n')
+        
+        if self.synonyms != []:
+            string.append('{{Синоними|\n')
+            string.append(self.synonyms)
+            string.append('}}\n\n')
+            
+        if self.hyperonyms != [] and self.hyperonyms != '':
+            string.append('{{Хипероними|\n')
+            string.append(self.hyperonyms)
+            string.append('}}\n\n')
+            
+        if end:
+            string.append('== Референце ==\n{{reflist}}\n\n== Напомене ==\n{{reflist|group="н"}}')
+        return string
 
 def find_duplicate_keys(d, no_of_dup):
     """
@@ -248,10 +344,18 @@ def get_type_of_entry(dictionary, s, entry):
     return entry
     
 def concat_entry(string):
-    return string
+    return ''.join(string)
+    
+def get_srb_genus(genus_serbian_name):
+    return genus_serbian_name
     
 def format_latin_species(species):
-    
+    species = species.replace('(', ',')
+    species = species.strip(')')
+    species = species.replace('=', '')
+    species = species.split(',')
+    species = ['[[' + x.strip() + ']]' for x in species]
+    species = ', '.join(species) + ' ' + BOOK
     return species
     
 def format_serbian_species(species, spec):
@@ -261,21 +365,22 @@ def format_serbian_species(species, spec):
             refs = s[1].split(';')
             refs = [x.strip() for x in refs]
             refs = [x for x in refs if x != '']
-            print(refs)
             refs = [REFERENCES[x] for x in refs]
             refs = ' '.join(refs)
-            spec_string.append(s[0] + ' ' + refs + ' ' + BOOK + '\n')
+            spec_string.append('# [[' + s[0] + ']] ' + refs + ' ' + BOOK + '\n')
     return ''.join(spec_string)
 
 def expand_dictionary(dictionary):
     dict_of_wiki_entries = {}
     for k in dictionary:
-        all_srb_spec = {}
+        all_srb_spec = []
         all_lat_spec = {}
         
         genus_lat_name = ' '.join([k, dictionary[k][k]['latin name'], dictionary[k][k]['discoverer']])
         if dictionary[k][k]['serbian name'] != []:
-            genus_serbian_name = dictionary[k][k]['serbian name'][0][0] #+ ' ' + REFERENCES[dictionary[k][k]['latin name'][1]]
+            genus_serbian_name = dictionary[k][k]['serbian name']
+        else:
+            genus_serbian_name = None
         
         for i, spec in enumerate(dictionary[k][k]['species']):
             latin_species = dictionary[k][k]['species'][spec][1]
@@ -283,19 +388,29 @@ def expand_dictionary(dictionary):
             all_lat_spec[i] = latin_species
             serbian_species = dictionary[k][k]['species'][spec][2]
             for spec in serbian_species:
-
                 serbian_synonyms = format_serbian_species(serbian_species, spec[0])
                 serb_spec = Serbian_species(spec[0])
                 serb_spec.synonyms = serbian_synonyms
+                if genus_serbian_name != None:
+                    serb_spec.hyperonyms = format_serbian_species(genus_serbian_name, spec[0])
+                serb_spec.languages = 'serbian'
+                serb_spec.serb_genus = get_srb_genus(genus_serbian_name)
+                serb_spec.lat_genus = genus_lat_name
+                serb_spec.set_gender()
+                dict_of_wiki_entries[serb_spec.name] = serb_spec
+                all_srb_spec.append(serbian_synonyms)
             
         lat_gen_entry = Latin_genus(genus_lat_name)
         lat_gen_entry.hyponyms = all_lat_spec
-        for srb_spec in genus_serbian_name:
-            srb_gen_entry = Serbian_genus(srb_spec[0])
-            srb_genus_synonym = [x for x in genus_serbian_name if x[0] != srb_spec[0]]
-            srb_gen_entry.synonyms = srb_genus_synonym
-            srb_gen_entry.hyponyms = all_srb_spec
-            srb_gen_entry.latin_names = genus_lat_name
-            dict_of_wiki_entries[srb_spec[0]] = srb_gen_entry
+        if genus_serbian_name != None:
+            for srb_spec in genus_serbian_name:
+                srb_gen_entry = Serbian_genus(srb_spec[0])
+                srb_genus_synonym = format_serbian_species(genus_serbian_name, srb_spec[0])
+                srb_gen_entry.synonyms = srb_genus_synonym
+                srb_gen_entry.hyponyms = list(set(all_srb_spec))
+                srb_gen_entry.latin_name = genus_lat_name
+                srb_gen_entry.language = 'serbian'
+                srb_gen_entry.set_gender()
+                dict_of_wiki_entries[srb_spec[0]] = srb_gen_entry
         
     return dict_of_wiki_entries

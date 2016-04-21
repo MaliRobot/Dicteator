@@ -78,9 +78,13 @@ def make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat
     """
     To print the entries to a text file.
     """
+    f = open('titles.txt', 'w', encoding='utf-8')
+        
+    
     if to_text:
         out = codecs.open('out/test1.txt', 'w', encoding = 'utf8')
         for k in entries:
+            f.write(k + '\n')
             out.write('\n{{-start-}}\n')
             out.write('\'\'\'%s\'\'\'\n' % (transliterate(k, lat)))
             if isinstance(entries[k], list):
@@ -100,7 +104,7 @@ def make_entries(dictionary, to_text, to_json, to_pickle, debug, breakpoint, lat
                 out.write(string)
             out.write('\n{{-stop-}}\n')
         out.close()            
-            
+    f.close()
     """
     To print the entries to the console.
     """
